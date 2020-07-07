@@ -22,16 +22,47 @@ def find_baremetal_servers(conn):
 
 conn = openstack.connection.from_config(cloud="arcus", debug=True)
 idracs = find_idrac_ports(conn)
-pprint.pprint(find_baremetal_servers(conn))
-
 print(len(idracs))
-idrac = idracs[0]
-pprint.pprint(idrac)
 
-new_node = conn.baremetal.create_node(name=idrac["name"], driver="ipmi",
-                                      driver_info={"ipmi_address": idrac["ip"]},
-                                      extra={"rack": idrac["rack"], "datacentre": idrac["datacentre"]},
-                                      retry_on_conflict=False,
-                                      expected_provision_state="enroll")
+baremetal_nodes = find_baremetal_servers(conn)
+print(len(baremetal_nodes))
 
-pprint.pprint(new_node)
+already_created = [node["name"] for node in baremetal_nodes]
+
+new_nodes = []
+for idrac in idracs:
+    if idrac["name"] not in already_created:
+        new_node = conn.baremetal.create_node(
+            name=idrac["name"], driver="idrac",
+            driver_info={
+              "drac_address": idrac["ip"],
+              # Starting with default passwords as shipped, updates later
+              "drac_password": "calvin",
+              "drac_username": "root",
+              "redfish_system_id": "/redfish/v1/Systems/System.Embedded.1",
+              "redfish_address": idrac["ip"],
+              "redfish_password": "calvin",
+              "redfish_username": "root",
+            },
+            boot_interface="ipxe",
+            bios_interface="no-bios",
+            console_interface="no-console",
+            deploy_interface="iscsi",
+            inspect_interface="idrac-wsman",
+            management_interface="idrac-wsman",
+            network_interface="neutron",
+            power_interface="idrac-wsman",
+            raid_interface="idrac-wsman",
+            rescue_interface="agent",
+            storage_interface="noop",
+            vendor_interface="idrac-wsman",
+            extra={
+               "rack": idrac["rack"],
+               "datacentre": idrac["datacentre"]},
+            retry_on_conflict=False,
+            provision_state="enroll",
+            resource_class="c6420.p8276.m192")
+        new_nodes.append(new_node)
+        pprint.pprint(new_node)
+pprint.pprint(new_nodes)
+print(len(new_nodes))
