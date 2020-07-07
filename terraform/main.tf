@@ -44,5 +44,7 @@ resource "openstack_networking_port_v2" "ports" {
 #  value = local.idrac_mapping
 #}
 output ports {
-  value = openstack_networking_port_v2.ports
+  value = {for port in openstack_networking_port_v2.ports:
+           port.name => port.all_fixed_ips[0]}
+          
 }
