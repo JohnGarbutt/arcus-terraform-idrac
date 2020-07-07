@@ -18,7 +18,7 @@ def find_idrac_ports(conn):
 
 
 def find_baremetal_servers(conn):
-    return list(conn.baremetal.nodes())
+    return list(conn.baremetal.nodes(details=True))
 
 conn = openstack.connection.from_config(cloud="arcus", debug=True)
 idracs = find_idrac_ports(conn)
@@ -66,3 +66,33 @@ for idrac in idracs:
         pprint.pprint(new_node)
 pprint.pprint(new_nodes)
 print(len(new_nodes))
+
+if len(new_nodes) > 0:
+    baremetal_nodes = find_baremetal_servers(conn)
+print(len(baremetal_nodes))
+
+#
+# Now enrolled, lets go to manage
+#
+
+move_to_manage = []
+for node in baremetal_nodes:
+    if node["provision_state"] == "enroll":
+        conn.baremetal.set_node_provision_state(node, 'manage')
+        move_to_manage.append(node)
+if len(move_to_manage) > 0:
+    conn.baremetal.wait_for_nodes_provision_state(move_to_manage, 'manageable')
+
+if len(move_to_manage) > 0:
+    baremetal_nodes = find_baremetal_servers(conn)
+
+#
+# doing out of bound inspection
+#
+inspecting = []
+for node in baremetal_nodes:
+    if node["properties"].get("cpus") is None and node["provision_state"] == "manageable":
+        conn.baremetal.set_node_provision_state(node, 'inspect')
+        inspecting.append(node)
+if len(inspecting) > 0:
+    conn.baremetal.wait_for_nodes_provision_state(inspecting, 'manageable')
