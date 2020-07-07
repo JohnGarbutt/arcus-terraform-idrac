@@ -1,0 +1,5 @@
+openstacksdk
+python-openstackclient
+python-ironicclient
+python-dracclient>=3.1.0
+sushy>=2.0.0
