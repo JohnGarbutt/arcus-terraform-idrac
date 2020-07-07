@@ -25,6 +25,24 @@ locals {
   idrac_mapping = csvdecode(file("idrac.csv"))
 }
 
-output idrac {
-  value = local.idrac_mapping
+data "openstack_networking_network_v2" "network" {
+  name = "out-of-band-management"
+}
+
+resource "openstack_networking_port_v2" "ports" {
+  for_each = { for mapping in local.idrac_mapping:
+               mapping.device_name => mapping}
+
+  name           = each.value.device_name
+  network_id     = data.openstack_networking_network_v2.network.id
+  mac_address    = each.value.bmc_mac_format
+  admin_state_up = "true"
+  tags           = [each.value.datacentre_id, each.value.rack]
+}
+
+#output idrac {
+#  value = local.idrac_mapping
+#}
+output ports {
+  value = openstack_networking_port_v2.ports
 }
