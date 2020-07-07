@@ -74,7 +74,6 @@ print(len(baremetal_nodes))
 #
 # Now enrolled, lets go to manage
 #
-
 move_to_manage = []
 for node in baremetal_nodes:
     if node["provision_state"] == "enroll":
@@ -96,3 +95,13 @@ for node in baremetal_nodes:
         inspecting.append(node)
 if len(inspecting) > 0:
     conn.baremetal.wait_for_nodes_provision_state(inspecting, 'manageable')
+
+
+if len(inspecting) > 0:
+    baremetal_nodes = find_baremetal_servers(conn)
+
+target_power = "power off"
+for node in baremetal_nodes:
+    if node["power_state"] != target_power:
+        conn.baremetal.set_node_power_state(node, target_power)
+
