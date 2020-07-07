@@ -37,7 +37,7 @@ resource "openstack_networking_port_v2" "ports" {
   network_id     = data.openstack_networking_network_v2.network.id
   mac_address    = each.value.bmc_mac_format
   admin_state_up = "true"
-  tags           = [each.value.datacentre_id, each.value.rack]
+  tags           = ["iDRAC", each.value.datacentre_id, each.value.rack]
 }
 
 #output idrac {
