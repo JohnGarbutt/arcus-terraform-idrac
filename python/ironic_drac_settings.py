@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import pprint
 import json
 
 import dracclient.client
@@ -26,4 +27,32 @@ client = dracclient.client.DRACClient(
     username="root",
     password="calvin")
 
-print(json.dumps(get_all_settings(client), indent=2))
+#print(json.dumps(get_all_settings(client), indent=2))
+
+jobs = client.list_jobs(only_unfinished=True)
+if len(jobs) > 0:
+    pprint.pprint(jobs)
+    exit(-1)
+
+bios_settings = {
+  "LogicalProc": "Disabled",
+}
+bios_result = client.set_bios_settings(bios_settings)
+print(bios_result)
+
+idrac_settings = {
+  "IPMILan.1#Enable": "Enabled",
+}
+idrac_result = client.set_idrac_settings(idrac_settings)
+print(idrac_result)
+
+reboot_required = bios_result['is_reboot_required']
+if bios_result['is_commit_required']:
+    reboot_required = bios_result['is_reboot_required']
+    print(client.commit_pending_bios_changes(reboot=reboot_required))
+
+if idrac_result['is_commit_required']:
+    reboot_required = idrac_result['is_reboot_required']
+    print(client.commit_pending_idrac_changes(reboot=reboot_required))
+
+pprint.pprint(client.list_jobs(only_unfinished=True))
