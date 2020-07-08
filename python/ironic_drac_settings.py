@@ -36,6 +36,8 @@ if len(jobs) > 0:
 
 bios_settings = {
   "LogicalProc": "Disabled",
+  "SysProfile": "PerfOptimized",
+  "SetBootOrderEn": "NIC.Embedded.1-1-1,HardDisk.List.1-1,InfiniBand.Slot.4-1,InfiniBand.Slot.4-2",
 }
 bios_result = client.set_bios_settings(bios_settings)
 print(bios_result)
