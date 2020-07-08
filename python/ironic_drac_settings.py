@@ -33,7 +33,9 @@ def update_settings(client):
     bios_settings = {
       "LogicalProc": "Disabled",
       "SysProfile": "PerfOptimized",
-      "SetBootOrderEn": "NIC.Embedded.1-1-1,HardDisk.List.1-1",
+      #"SetBootOrderEn": "NIC.Embedded.1-1-1,HardDisk.List.1-1",
+      "SetBootOrderFqdd1": "NIC.Embedded.1-1-1",
+      "SetBootOrderFqdd2": "HardDisk.List.1-1",
     }
     bios_result = client.set_bios_settings(bios_settings)
     print(bios_result)
