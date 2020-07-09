@@ -23,6 +23,15 @@
   changed_when: false
   register: mst_status_result
 
+- name: Replace uname to fix detection of kernel and architecture in DIB chroot
+  # FIXME: change this back
+  copy:
+    src: files/uname
+    dest: /bin/uname
+    owner: root
+    group: root
+    mode: "0755"
+
 - name: Install MFT
   command: "{{ sriov_workdir }}/{{ no_ext }}/install.sh"
   vars:
