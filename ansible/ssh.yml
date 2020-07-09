@@ -1,0 +1,22 @@
+---
+
+- hosts: all
+  gather_facts: false
+  tasks:
+  - name: Update the /etc/ssh/sshd_config file
+    lineinfile:
+      dest: /etc/ssh/sshd_config
+      regexp: "^UseDNS"
+      line: "UseDNS no"
+      insertafter: EOF
+      state: present
+    become: true
+    register: ssh_config
+
+  - name: Restart ssh
+    service:
+      name: sshd
+      state: restarted
+    when: ssh_config.changed
+    become: true
+
