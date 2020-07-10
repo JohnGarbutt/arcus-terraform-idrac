@@ -1,6 +1,6 @@
 ---
 
-- hosts: all
+- hosts: localhost
   tasks:
     - include_role:
         name: mft

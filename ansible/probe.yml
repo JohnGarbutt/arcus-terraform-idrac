@@ -1,0 +1,8 @@
+---
+
+- hosts: all
+  tasks:
+    - assert:
+        that: "'p4p1' in ansible_interfaces or 'p4p2' in ansible_interfaces"
+    - assert:
+        that: "'ib0' in ansible_interfaces"

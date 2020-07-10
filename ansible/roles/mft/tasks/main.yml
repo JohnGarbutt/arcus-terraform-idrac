@@ -40,11 +40,3 @@
   become: true
   register: mft_install_result
   when: mst_status_result.rc != 0
-
-- name: "Run: mst start"
-  command: mst start
-  become: true
-  tags:
-    - skip_ansible_lint
-    - skip_when_testing
-  when: mft_install_result.changed
