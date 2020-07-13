@@ -241,6 +241,12 @@ if __name__ == "__main__":
 
     inspecting = []
     for node in nodes:
+        # Skip node if already bootstrapped
+        if "bootstrap_stage" in node["extra"] \
+                and node["extra"]["bootstrap_stage"] in ["inspect_1G"]:
+            print("Stage invalid, exiting")
+            continue
+
         if node["provision_state"] in ["inspect wait", "inspecting"]:
             print("inspecting: " + node.name + " " + node["driver_info"]["drac_address"])
             inspecting.append(node)
