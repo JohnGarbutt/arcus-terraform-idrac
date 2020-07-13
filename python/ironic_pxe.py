@@ -110,13 +110,19 @@ def setup_port(conn, node):
         if len(existing_ports) != 1:
             print("found too many ports")
             sys.exit(1)
+        port = existing_ports[0]
+        if port["name"] != f'{node["name"]}-pxe':
+            print("detected duplicate mac")
+            sys.exit(2)
         print("found existing port: " + mac)
-        return existing_ports[0]
+        # TODO: conn.network.delete_port(port)
+        return port
 
     dhcp_extras = [
         {
             'opt_name': 'tag:ipxe,67',
-            'opt_value': 'http://10.225.1.1:8089/arcus.ipxe',
+            'opt_value': 'http://10.225.1.1:8089/inspector.ipxe',
+            #'opt_value': 'http://10.225.1.1:8089/arcus.ipxe',
             'ip_version': 4
         },
         {
@@ -207,6 +213,7 @@ if __name__ == "__main__":
 
         # Ask for power on, if not already
         # TODO: better handle nodes that are already turned on?
+        # TODO: reboot: conn.baremetal.set_node_power_state(node, "power off")
         if node["power_state"] != "power on":
             time.sleep(2)  # be conservative about power demand
             conn.baremetal.set_node_power_state(node, "power on")
