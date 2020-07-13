@@ -166,6 +166,11 @@ def check_pending(conn, pending):
         print("ping check passed: " + node["name"])
 
     if len(still_pending) > 0:
+        print("previously pending: " + str(len(pending)))
+        print(",".join([node["name"] for node in pending]))
+        print("still pending: " + str(len(still_pending)))
+        print(",".join([node["name"] for node in still_pending]))
+        print(",".join([node["driver_info"]["drac_address"] for node in still_pending]))
         time.sleep(5)
         check_pending(conn, still_pending)
 
