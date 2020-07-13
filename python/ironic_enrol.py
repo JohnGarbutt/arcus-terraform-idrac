@@ -72,7 +72,7 @@ if len(new_nodes) > 0:
 print(len(baremetal_nodes))
 
 #
-# Now enrolled, lets go to manage
+# if in enroll state, go to manage state
 #
 move_to_manage = []
 for node in baremetal_nodes:
@@ -86,7 +86,7 @@ if len(move_to_manage) > 0:
     baremetal_nodes = find_baremetal_servers(conn)
 
 #
-# doing out of bound inspection
+# doing out of bound inspection, if cpus not populated
 #
 inspecting = []
 for node in baremetal_nodes:
@@ -100,8 +100,18 @@ if len(inspecting) > 0:
 if len(inspecting) > 0:
     baremetal_nodes = find_baremetal_servers(conn)
 
+#
+# Get out of maintanaince mode
+#
+#for node in baremetal_nodes:
+#    if node["is_maintenance"]:
+#        print("Warning: node was in maintanance mode: " + node['name'])
+#        conn.baremetal.unset_node_maintenance(node)
+
+#
+# power everything off
+#
 target_power = "power off"
 for node in baremetal_nodes:
     if node["power_state"] != target_power:
         conn.baremetal.set_node_power_state(node, target_power)
-
