@@ -231,11 +231,7 @@ def test_inspector_pxe_boot(conn):
     check_pending(conn, pending)
 
 
-if __name__ == "__main__":
-    openstack.enable_logging(True, stream=sys.stdout)
-    conn = openstack.connection.from_config(cloud="arcus", debug=False)
-    #test_inspector_pxe_boot(conn)
-
+def inspect_nodes(conn):
     nodes = ironic_drac_settings.get_nodes_in_rack(conn, "DR06")
 
     inspecting = []
@@ -281,3 +277,10 @@ if __name__ == "__main__":
         time.sleep(2)
 
     conn.baremetal.wait_for_nodes_provision_state(inspecting, 'manageable')
+
+
+if __name__ == "__main__":
+    openstack.enable_logging(True, stream=sys.stdout)
+    conn = openstack.connection.from_config(cloud="arcus", debug=False)
+    #test_inspector_pxe_boot(conn)
+    inspect_nodes(conn)
