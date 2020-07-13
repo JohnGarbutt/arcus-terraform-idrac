@@ -279,8 +279,38 @@ def inspect_nodes(conn):
     conn.baremetal.wait_for_nodes_provision_state(inspecting, 'manageable')
 
 
+def get_inspection_data(conn):
+    nodes = ironic_drac_settings.get_nodes_in_rack(conn, "DR06")
+
+    result = []
+    for raw_node in nodes:
+        ports = list(conn.baremetal.ports(node=raw_node["id"], details=True))
+
+        name = raw_node['name']
+        ip = raw_node["driver_info"]["drac_address"]
+        node = {
+            "name": name,
+            "ip": ip,
+            "uuid": raw_node['id'],
+            "ports": {},
+        }
+
+        extra = raw_node['extra']
+        if extra and "system_vendor" in extra:
+            node["service_tag"] = extra['system_vendor'].get('serial_number')
+
+        for raw_port in ports:
+            lldp = raw_port['local_link_connection']
+            mac = raw_port['address']
+            node["ports"][mac] = lldp
+        result.append(node)
+
+    print(json.dumps(result, indent=2))
+
+
 if __name__ == "__main__":
     openstack.enable_logging(True, stream=sys.stdout)
     conn = openstack.connection.from_config(cloud="arcus", debug=False)
     #test_inspector_pxe_boot(conn)
-    inspect_nodes(conn)
+    #inspect_nodes(conn)
+    get_inspection_data(conn)
