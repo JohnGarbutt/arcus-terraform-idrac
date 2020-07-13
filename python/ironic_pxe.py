@@ -237,20 +237,20 @@ if __name__ == "__main__":
     #test_inspector_pxe_boot(conn)
 
     nodes = ironic_drac_settings.get_nodes_in_rack(conn, "DR06")
-    nodes = nodes[:1]
 
     inspecting = []
     for node in nodes:
-        # Skip node if already bootstrapped
-        if "bootstrap_stage" in node["extra"] \
-                and node["extra"]["bootstrap_stage"] in ["inspect_1G"]:
-            print("Stage invalid, exiting")
-            continue
-
         if node["provision_state"] in ["inspect wait", "inspecting"]:
             print("inspecting: " + node.name + " " + node["driver_info"]["drac_address"])
             inspecting.append(node)
             continue
+
+        # Skip node if already bootstrapped
+        if "bootstrap_stage" in node["extra"] \
+                and node["extra"]["bootstrap_stage"] in ["inspect_1GbE"]:
+            print("Stage invalid, exiting")
+            continue
+
         if node["provision_state"] != "manageable":
             print("Ignoring node, invalid state")
             continue
@@ -262,7 +262,7 @@ if __name__ == "__main__":
             conn.baremetal.unset_node_maintenance(node)
 
         extra = node["extra"]
-        extra["bootstrap_stage"] = "inspect_1G"
+        extra["bootstrap_stage"] = "inspect_1GbE"
         patch = [
             {
                 "op": "replace",
@@ -278,5 +278,6 @@ if __name__ == "__main__":
         conn.baremetal.set_node_provision_state(node, 'inspect')
         inspecting.append(node)
         print("inspecting: " + node.name + " " + node["driver_info"]["drac_address"])
+        time.sleep(2)
 
     conn.baremetal.wait_for_nodes_provision_state(inspecting, 'manageable')
