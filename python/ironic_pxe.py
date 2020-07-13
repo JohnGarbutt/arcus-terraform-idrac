@@ -181,7 +181,7 @@ if __name__ == "__main__":
     #    sys.exit(1)
 
     nodes = ironic_drac_settings.get_nodes_in_rack(conn, "DR06")
-    nodes = nodes[0:2]
+    #nodes = nodes[0:2]
     print(len(nodes))
 
     pending = []
@@ -203,7 +203,9 @@ if __name__ == "__main__":
         # Ask for power on, if not already
         # TODO: better handle nodes that are already turned on?
         if node["power_state"] != "power on":
+            time.sleep(2)  # be conservative about power demand
             conn.baremetal.set_node_power_state(node, "power on")
+            print("Powered on: " + node["name"])
 
         # tell ironic not to mess with power
         # as we expect to reboot a few times
@@ -211,6 +213,7 @@ if __name__ == "__main__":
             # Don't power down during firmware upgrade!
             conn.baremetal.set_node_maintenance(node, reason="PXE to flash nic firmware")
 
+        print("Waiting for: " + node["name"])
         pending.append(node)
 
     time.sleep(5)
