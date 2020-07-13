@@ -82,7 +82,11 @@ to stop Ironic modifying the power state of the node.
 Boot into ramdisk to update mellanox firmware, as required.
 This requires a reboot of the node via a script in the ramdisk.
 
-We use neutron to hand out PXE details, other dhcp can be used instead.
+We use neutron to hand out PXE details,
+other dhcp can be used instead.
+
+    cd python
+    ./ironic_pxe.py
 
 ## Step 5: Do in-band inspection via high speed ethernet nic
 

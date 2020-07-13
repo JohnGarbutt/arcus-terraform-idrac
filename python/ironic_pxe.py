@@ -8,7 +8,10 @@ import os
 import openstack
 import json
 import subprocess
+import time
+
 import dracclient
+
 import ironic_drac_settings
 
 # SUSHY_LOG = logging.getLogger('sushy')
@@ -86,60 +89,29 @@ def check_ping(port):
     return response == 0
 
 
-if __name__ == "__main__":
-    conn = openstack.connection.from_config(cloud="envvars", debug=False)
-
-    # Server to operate on
-    id = sys.argv[1]
-
-    node = conn.baremetal.find_node(id)
-
-    # This is to prevent use creating the ports again for PXE booting on the
-    # 1G
-    if "bootstrap_stage" in node["extra"] \
-            and node["extra"]["bootstrap_stage"] in ["inspect"]:
-        print("Stage invalid, exiting")
-        sys.exit(1)
-
-    if node["provision_state"] != "manageable":
-        print("Ignoring")
-        sys.exit(1)
-
-    if not node:
-        print("Bailing out: node not found")
-        sys.exit(1)
-
-    # 'driver_info': {'drac_address': '10.202.100.105',
-    #                 'drac_password': '******',
-    #                 'drac_username': 'root',
-    #                 'redfish_address': '10.202.100.105',
-    #                 'redfish_password': '******',
-    #                 'redfish_system_id': '/redfish/v1/Systems/System.Embedded.1',
-    #                 'redfish_username': 'root'},
+def check_ssh(port):
+    ip = port["fixed_ips"][0]["ip_address"]
+    response = os.system("nc -zvw3 " + ip + " 22")
+    return response == 0
 
 
-    # Sushy fails with: KeyError: 'Actions'
-    # url = f'http://{driver_info["redfish_address"]}/redfish/v1'
-    # s = sushy.Sushy(url, username='root', password='calvin', verify=False)
-    #
-    # # Get the Redfish version
-    # print(s.redfish_version)
-    #
-    # bmc_system = s.get_system(f'{driver_info["redfish_system_id"]}/')
-    # bmc_system.set_system_boot_source(sushy.BOOT_SOURCE_TARGET_PXE,
-    #                                 enabled=sushy.BOOT_SOURCE_ENABLED_ONCE,
-    #                                 mode=sushy.BOOT_SOURCE_MODE_BIOS)
+def setup_port(conn, node):
+    ports = list(conn.baremetal.ports(node=node.id))
 
-    ports = list(conn.baremetal.ports(node=id))
-
-    if len(ports) < 0:
+    if len(ports) != 1:
         # FIXME: user logger
-        print("Bailing out: no ports")
+        print("Bailing out: port count is not 1")
         sys.exit(1)
 
     mac = ports[0]["address"]
 
     existing_ports = list(conn.network.ports(mac_address=mac))
+    if existing_ports:
+        if len(existing_ports) != 1:
+            print("found too many ports")
+            sys.exit(1)
+        print("found existing port: " + mac)
+        return existing_ports[0]
 
     dhcp_extras = [
         {
@@ -168,41 +140,79 @@ if __name__ == "__main__":
             'ip_version': 4
         },
     ]
-
-    if not existing_ports:
-        port = conn.network.create_port(
-            name=f'{node["name"]}-pxe', mac_address=mac,
-            network_id="fa913866-b115-49db-8198-dee31461628d",
-            extra_dhcp_opts=dhcp_extras,
-        )
-        conn.network.set_tags(port, ["pxe-bootstrap"])
-    else:
-        port = existing_ports[0]
-
-    if not node["is_maintenance"]:
-        # Don't power down during firmware upgrade!
-        conn.baremetal.set_node_maintenance(id, reason="Going for PXE boot")
-
-    if not check_ping(port):
-        pxe_on_next_boot(node)
-        # Is ironic turning off my nodes?
-        conn.baremetal.set_node_power_state(node, "power on")
-        # I wanted persistent PXE, but this doesn't seem to work, so i'm polling
-        # this script instead
-        ##status = configure_bios(node)
-        # Seems to leave the node in power off state
-        # if not status["rebooted"]:
-        reboot(node)
-
-    # if node["power_state"] != "power on":
-    #     conn.baremetal.set_node_power_state(node, "power on")
-    # else:
-    #     conn.baremetal.set_node_power_state(node, "power off")
-    #     conn.baremetal.set_node_power_state(node, "power on")
+    port = conn.network.create_port(
+        name=f'{node["name"]}-pxe', mac_address=mac,
+        network_id="fa913866-b115-49db-8198-dee31461628d",
+        extra_dhcp_opts=dhcp_extras,
+    )
+    conn.network.set_tags(port, ["pxe-bootstrap"])
+    print("created a new port: " + mac)
+    return port
 
 
+def check_pending(conn, pending):
+    still_pending = []
+
+    for node in pending:
+        node = conn.baremetal.find_node(node.id)
+        if node["power_state"] != "power on":
+            print("node not powered on: " + node.name)
+            conn.baremetal.set_node_power_state(node, "power on")
+
+        port = setup_port(conn, node)
+        if not check_ssh(port):
+            print("can't ping port for: " + node.name + " " + node["driver_info"]["drac_address"])
+            still_pending.append(node)
+        print("ping check passed: " + node["name"])
+
+    if len(still_pending) > 0:
+        time.sleep(5)
+        check_pending(conn, still_pending)
 
 
+if __name__ == "__main__":
+    conn = openstack.connection.from_config(cloud="arcus", debug=False)
 
+    # Server to operate on
+    #id = sys.argv[1]
+    #node = conn.baremetal.find_node(id)
+    #if not node:
+    #    print("Bailing out: node not found")
+    #    sys.exit(1)
 
+    nodes = ironic_drac_settings.get_nodes_in_rack(conn, "DR06")
+    nodes = nodes[0:2]
+    print(len(nodes))
 
+    pending = []
+    for node in nodes:
+        # Skip node if already bootstrapped
+        if "bootstrap_stage" in node["extra"] \
+                and node["extra"]["bootstrap_stage"] in ["inspect"]:
+            print("Stage invalid, exiting")
+            continue
+
+        if node["provision_state"] != "manageable":
+            print("Ignoring node, invalid state")
+            continue
+
+        # Setup dhcp to hand out boot
+        port = setup_port(conn, node)
+        print(port)
+
+        # Ask for power on, if not already
+        # TODO: better handle nodes that are already turned on?
+        if node["power_state"] != "power on":
+            conn.baremetal.set_node_power_state(node, "power on")
+
+        # tell ironic not to mess with power
+        # as we expect to reboot a few times
+        if not node["is_maintenance"]:
+            # Don't power down during firmware upgrade!
+            conn.baremetal.set_node_maintenance(node, reason="PXE to flash nic firmware")
+
+        pending.append(node)
+
+    time.sleep(5)
+
+    check_pending(conn, pending)

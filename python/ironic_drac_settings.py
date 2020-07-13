@@ -104,7 +104,7 @@ def find_idrac_ports(conn):
         for raw_port in conn.network.ports(tags="iDRAC")]
 
 
-def get_nodes_in_rack(rack_name):
+def get_nodes_in_rack(conn, rack_name):
     ips = [idrac["ip"] for idrac in find_idrac_ports(conn)
            if idrac["rack"] == rack_name]
     expected_node_count = len(ips)
@@ -125,7 +125,7 @@ if __name__ == "__main__":
     openstack.enable_logging(True, stream=sys.stdout)
     conn = openstack.connection.from_config(cloud="arcus", debug=True)
 
-    nodes = get_nodes_in_rack("DR06")
+    nodes = get_nodes_in_rack(conn, "DR06")
 
     clients = {}
     for node in nodes:
