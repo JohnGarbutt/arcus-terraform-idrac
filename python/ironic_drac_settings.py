@@ -3,6 +3,7 @@
 import json
 import pprint
 import sys
+import time
 
 import dracclient.client
 import openstack
@@ -25,18 +26,28 @@ def get_all_settings(client):
 
 
 def update_settings(client):
+    if not client.is_idrac_ready():
+        print("iDRAC not ready for update settings, skipping")
+        return
+
     jobs = client.list_jobs(only_unfinished=True)
     if len(jobs) > 0:
         pprint.pprint(jobs)
-        exit(-1)
+        print("skip update settings, jobs in progress")
+        return
 
     bios_settings = {
       "LogicalProc": "Disabled",
       "SysProfile": "PerfOptimized",
       #"SetBootOrderEn": "NIC.Embedded.1-1-1,HardDisk.List.1-1",
       #"SetBootOrderEn": "NIC.Slot.4-1,InfiniBand.Slot.4-1,NIC.Embedded.1-1-1,HardDisk.List.1-1",
+      #"SetBootOrderEn": "NIC.Embedded.1-1-1,HardDisk.List.1-1",
       "SetBootOrderFqdd1": "NIC.Embedded.1-1-1",
       "SetBootOrderFqdd2": "HardDisk.List.1-1",
+      #"SetBootOrderFqdd3": "InfiniBand.Slot.4-1",
+      "SetBootOrderFqdd3": "",
+      #"SetBootOrderFqdd4": "InfiniBand.Slot.4-2",
+      "SetBootOrderFqdd4": "",
     }
     bios_result = client.set_bios_settings(bios_settings)
     print(bios_result)
@@ -56,10 +67,30 @@ def update_settings(client):
         reboot_required = idrac_result['is_reboot_required']
         print(client.commit_pending_idrac_changes(reboot=reboot_required))
 
-    pprint.pprint(client.list_jobs(only_unfinished=True))
     return {
         "rebooted": reboot_required
     }
+
+
+def wait_for_jobs(clients):
+    pending = {}
+
+    for name, client in clients.items():
+        if not client.is_idrac_ready():
+            pending[name] = client
+        else:
+            jobs = client.list_jobs(only_unfinished=True)
+            if len(jobs) > 0:
+                pending[name] = client
+            else:
+                # TODO: check job was a success
+                print(name + " has no unfinished jobs")
+
+    if len(pending) > 0:
+        hosts = ",".join(list(pending.keys()))
+        print("Unfinished jobs found: " + hosts)
+        time.sleep(5)
+        wait_for_jobs(pending)
 
 
 def find_idrac_ports(conn):
@@ -73,19 +104,41 @@ def find_idrac_ports(conn):
         for raw_port in conn.network.ports(tags="iDRAC")]
 
 
+def get_nodes_in_rack(rack_name):
+    ips = [idrac["ip"] for idrac in find_idrac_ports(conn)
+           if idrac["rack"] == rack_name]
+    expected_node_count = len(ips)
+
+    all_nodes = conn.baremetal.nodes(details=True)
+    nodes = []
+    for node in all_nodes:
+        if node["driver_info"]["drac_address"] in ips:
+            nodes.append(node)
+    if len(nodes) != expected_node_count:
+        print("unable to find all nodes")
+        exit(-1)
+    print("found all nodes")
+    return nodes
+
+
 if __name__ == "__main__":
     openstack.enable_logging(True, stream=sys.stdout)
-    conn = openstack.connection.from_config(cloud="envvars", debug=True)
+    conn = openstack.connection.from_config(cloud="arcus", debug=True)
 
-    ips = [idrac["ip"] for idrac in find_idrac_ports(conn)]
-    print(ips)
+    nodes = get_nodes_in_rack("DR06")
 
-    for ip in ips:
+    clients = {}
+    for node in nodes:
+        ip = node["driver_info"]["drac_address"]
+        name = node["name"]
         client = dracclient.client.DRACClient(
             host=ip,
             username="root",
             password="calvin")
-        print(json.dumps(get_all_settings(client), indent=2))
-        break
-        #update_settings(client)
+        #print(json.dumps(get_all_settings(client), indent=2))
+        print("Try BIOS Update for " + ip + " " + name)
+        update_settings(client)
+        print("Submitted BIOS Update for " + ip + " " + name)
+        clients[name] = client
 
+    wait_for_jobs(clients)

@@ -61,6 +61,18 @@ We can use in iDRAC inspection to get the mac address of pxe 1GbE nic.
 
 Out the box it boots to hard disk, lets force 1GbE PXE boot.
 
+This forces all hosts in the specified rack to boot using 1GbE nic.
+This triggers a host reboot. This also sets the peformance profile
+and disabled hyperthreading.
+
+    cd python
+    ./ironic_drac_settings.py
+
+TODO: this currently isn't idenpotent. On every invocation it
+triggers a bios reconfigure and node reboot for every host without
+a pending job. Its a bit slow, one rack takes about 30 mins till
+it starts polling all the node for success.
+
 ## Step 4: Manually boot up on 1GbE custom ramdisk
 
 We are not using ironic to deploy here,
