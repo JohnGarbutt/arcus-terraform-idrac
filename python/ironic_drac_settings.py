@@ -34,6 +34,7 @@ def update_settings(client):
       "LogicalProc": "Disabled",
       "SysProfile": "PerfOptimized",
       #"SetBootOrderEn": "NIC.Embedded.1-1-1,HardDisk.List.1-1",
+      #"SetBootOrderEn": "NIC.Slot.4-1,InfiniBand.Slot.4-1,NIC.Embedded.1-1-1,HardDisk.List.1-1",
       "SetBootOrderFqdd1": "NIC.Embedded.1-1-1",
       "SetBootOrderFqdd2": "HardDisk.List.1-1",
     }
