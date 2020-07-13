@@ -232,5 +232,43 @@ def test_inspector_pxe_boot(conn):
 
 
 if __name__ == "__main__":
-    conn = openstack.connection.from_config(cloud="arcus", debug=False)
-    test_inspector_pxe_boot(conn)
+    openstack.enable_logging(True, stream=sys.stdout)
+    conn = openstack.connection.from_config(cloud="arcus", debug=True)
+    #test_inspector_pxe_boot(conn)
+
+    nodes = ironic_drac_settings.get_nodes_in_rack(conn, "DR06")
+    nodes = nodes[:1]
+
+    inspecting = []
+    for node in nodes:
+        if node["provision_state"] in ["inspect wait", "inspecting"]:
+            inspecting.append(node)
+            continue
+        if node["provision_state"] != "manageable":
+            print("Ignoring node, invalid state")
+            continue
+
+        if node["power_state"] == "power on":
+            conn.baremetal.set_node_power_state(node, "power off")
+
+        if node["is_maintenance"]:
+            conn.baremetal.unset_node_maintenance(node)
+
+        extra = node["extra"]
+        extra["bootstrap_stage"] = "inspect_1G"
+        patch = [
+            {
+                "op": "replace",
+                "path": "inspect_interface",
+                "value": "inspector"
+            },
+            {
+                "op": "replace",
+                "path": "extra",
+                "value": extra
+            }]
+        conn.baremetal.patch_node(node, patch)
+        conn.baremetal.set_node_provision_state(node, 'inspect')
+        inspecting.append(node)
+
+    conn.baremetal.wait_for_nodes_provision_state(inspecting, 'manageable')
