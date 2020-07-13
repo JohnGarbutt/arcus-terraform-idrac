@@ -299,11 +299,16 @@ def get_inspection_data(conn):
         if extra and "system_vendor" in extra:
             node["service_tag"] = extra['system_vendor'].get('serial_number')
 
+        lldp_count = 0
         for raw_port in ports:
             lldp = raw_port['local_link_connection']
+            if lldp:
+                lldp_count += 1
             mac = raw_port['address']
             node["ports"][mac] = lldp
-        result.append(node)
+        #result.append(node)
+        if lldp_count < 2:
+            result.append(node)
 
     print(json.dumps(result, indent=2))
 
