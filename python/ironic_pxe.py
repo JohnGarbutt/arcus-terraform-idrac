@@ -181,9 +181,7 @@ def check_pending(conn, pending):
         check_pending(conn, still_pending)
 
 
-if __name__ == "__main__":
-    conn = openstack.connection.from_config(cloud="arcus", debug=False)
-
+def test_inspector_pxe_boot(conn):
     # Server to operate on
     #id = sys.argv[1]
     #node = conn.baremetal.find_node(id)
@@ -231,3 +229,8 @@ if __name__ == "__main__":
     time.sleep(5)
 
     check_pending(conn, pending)
+
+
+if __name__ == "__main__":
+    conn = openstack.connection.from_config(cloud="arcus", debug=False)
+    test_inspector_pxe_boot(conn)
