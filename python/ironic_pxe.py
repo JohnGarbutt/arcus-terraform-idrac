@@ -233,7 +233,7 @@ def test_inspector_pxe_boot(conn):
 
 if __name__ == "__main__":
     openstack.enable_logging(True, stream=sys.stdout)
-    conn = openstack.connection.from_config(cloud="arcus", debug=True)
+    conn = openstack.connection.from_config(cloud="arcus", debug=False)
     #test_inspector_pxe_boot(conn)
 
     nodes = ironic_drac_settings.get_nodes_in_rack(conn, "DR06")
@@ -242,6 +242,7 @@ if __name__ == "__main__":
     inspecting = []
     for node in nodes:
         if node["provision_state"] in ["inspect wait", "inspecting"]:
+            print("inspecting: " + node.name + " " + node["driver_info"]["drac_address"])
             inspecting.append(node)
             continue
         if node["provision_state"] != "manageable":
@@ -270,5 +271,6 @@ if __name__ == "__main__":
         conn.baremetal.patch_node(node, patch)
         conn.baremetal.set_node_provision_state(node, 'inspect')
         inspecting.append(node)
+        print("inspecting: " + node.name + " " + node["driver_info"]["drac_address"])
 
     conn.baremetal.wait_for_nodes_provision_state(inspecting, 'manageable')
