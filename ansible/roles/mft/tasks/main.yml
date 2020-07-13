@@ -1,0 +1,42 @@
+---
+
+- name: Install MFT dependencies
+  yum:
+    name: "{{ sriov_os_pkgs }}"
+  become: true
+
+- name: Make working directory
+  file:
+    state: directory
+    path: "{{ sriov_workdir }}"
+
+- name: Download MFT
+  unarchive:
+    src: "{{ sriov_mft_url }}"
+    dest: "{{ sriov_workdir }}"
+    remote_src: true
+
+- name: Determine if we can run mst_status
+  command: mst status
+  become: true
+  failed_when: false
+  changed_when: false
+  register: mst_status_result
+
+- name: Replace uname to fix detection of kernel and architecture in DIB chroot
+  # FIXME: change this back
+  copy:
+    src: files/uname
+    dest: /bin/uname
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Install MFT
+  command: "{{ sriov_workdir }}/{{ no_ext }}/install.sh"
+  vars:
+    # Strip the file extension
+    no_ext: "{{ (sriov_mft_tarball | splitext)[0] }}"
+  become: true
+  register: mft_install_result
+  when: mst_status_result.rc != 0

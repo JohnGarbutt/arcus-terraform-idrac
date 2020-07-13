@@ -56,6 +56,9 @@ def update_settings(client):
         print(client.commit_pending_idrac_changes(reboot=reboot_required))
 
     pprint.pprint(client.list_jobs(only_unfinished=True))
+    return {
+        "rebooted": reboot_required
+    }
 
 
 def find_idrac_ports(conn):
@@ -69,16 +72,19 @@ def find_idrac_ports(conn):
         for raw_port in conn.network.ports(tags="iDRAC")]
 
 
-openstack.enable_logging(True, stream=sys.stdout)
-conn = openstack.connection.from_config(cloud="arcus", debug=True)
+if __name__ == "__main__":
+    openstack.enable_logging(True, stream=sys.stdout)
+    conn = openstack.connection.from_config(cloud="envvars", debug=True)
 
-ips = [idrac["ip"] for idrac in find_idrac_ports(conn)]
-print(ips)
+    ips = [idrac["ip"] for idrac in find_idrac_ports(conn)]
+    print(ips)
 
-client = dracclient.client.DRACClient(
-    host="10.202.100.137",
-    username="root",
-    password="calvin")
-#print(json.dumps(get_all_settings(client), indent=2))
-update_settings(client)
+    for ip in ips:
+        client = dracclient.client.DRACClient(
+            host=ip,
+            username="root",
+            password="calvin")
+        print(json.dumps(get_all_settings(client), indent=2))
+        break
+        #update_settings(client)
 
