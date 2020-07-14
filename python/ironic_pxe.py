@@ -20,12 +20,17 @@ import ironic_drac_settings
 
 #openstack.enable_logging(True, stream=sys.stdout)
 
-def configure_bios(node):
+def get_dracclient(node):
     driver_info = node["driver_info"]
     client = dracclient.client.DRACClient(
         host=f'{driver_info["redfish_address"]}',
         username="root",
         password="calvin")
+    return client
+
+
+def configure_bios(node):
+    client = get_dracclient(node)
     return ironic_drac_settings.update_settings(client)
 
 
@@ -313,9 +318,37 @@ def get_inspection_data(conn):
     print(json.dumps(result, indent=2))
 
 
+def request_hse_boot(conn):
+    nodes = ironic_drac_settings.get_nodes_in_rack(conn, "DR06")
+    nodes = nodes[:1]
+
+    clients = {}
+    for node in nodes:
+        print("moving to hse boot: " + node.name + " " + node["driver_info"]["drac_address"])
+        dclient = get_dracclient(node)
+        bios_settings = {
+          "LogicalProc": "Disabled",
+          "SysProfile": "PerfOptimized",
+          #"SetBootOrderEn": "NIC.Slot.4-1,InfiniBand.Slot.4-1,NIC.Embedded.1-1-1,HardDisk.List.1-1",
+          "SetBootOrderFqdd1": "NIC.Slot.4-1",
+          "SetBootOrderFqdd2": "HardDisk.List.1-1",
+          "SetBootOrderFqdd3": "InfiniBand.Slot.4-1",
+          "SetBootOrderFqdd4": "NIC.Embedded.1-1-1",
+        }
+        idrac_settings={
+        }
+        ironic_drac_settings.update_settings(
+            dclient, bios_settings, idrac_settings)
+        name = node["name"]
+        clients[name] = dclient
+
+    ironic_drac_settings.wait_for_jobs(clients)
+
+
 if __name__ == "__main__":
     openstack.enable_logging(True, stream=sys.stdout)
     conn = openstack.connection.from_config(cloud="arcus", debug=False)
     #test_inspector_pxe_boot(conn)
     #inspect_nodes(conn)
-    get_inspection_data(conn)
+    #get_inspection_data(conn)
+    request_hse_boot(conn)

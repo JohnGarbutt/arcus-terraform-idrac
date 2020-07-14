@@ -25,7 +25,7 @@ def get_all_settings(client):
     return all_settings
 
 
-def update_settings(client):
+def update_settings(client, bios_settings=None, idrac_settings=None):
     if not client.is_idrac_ready():
         print("iDRAC not ready for update settings, skipping")
         return
@@ -36,34 +36,40 @@ def update_settings(client):
         print("skip update settings, jobs in progress")
         return
 
-    bios_settings = {
-      "LogicalProc": "Disabled",
-      "SysProfile": "PerfOptimized",
-      #"SetBootOrderEn": "NIC.Embedded.1-1-1,HardDisk.List.1-1",
-      #"SetBootOrderEn": "NIC.Slot.4-1,InfiniBand.Slot.4-1,NIC.Embedded.1-1-1,HardDisk.List.1-1",
-      #"SetBootOrderEn": "NIC.Embedded.1-1-1,HardDisk.List.1-1",
-      "SetBootOrderFqdd1": "NIC.Embedded.1-1-1",
-      "SetBootOrderFqdd2": "HardDisk.List.1-1",
-      #"SetBootOrderFqdd3": "InfiniBand.Slot.4-1",
-      "SetBootOrderFqdd3": "",
-      #"SetBootOrderFqdd4": "InfiniBand.Slot.4-2",
-      "SetBootOrderFqdd4": "",
-    }
-    bios_result = client.set_bios_settings(bios_settings)
-    print(bios_result)
+    if bios_settings is None:
+        bios_settings = {
+          "LogicalProc": "Disabled",
+          "SysProfile": "PerfOptimized",
+          #"SetBootOrderEn": "NIC.Embedded.1-1-1,HardDisk.List.1-1",
+          #"SetBootOrderEn": "NIC.Slot.4-1,InfiniBand.Slot.4-1,NIC.Embedded.1-1-1,HardDisk.List.1-1",
+          #"SetBootOrderEn": "NIC.Embedded.1-1-1,HardDisk.List.1-1",
+          "SetBootOrderFqdd1": "NIC.Embedded.1-1-1",
+          "SetBootOrderFqdd2": "HardDisk.List.1-1",
+          #"SetBootOrderFqdd3": "InfiniBand.Slot.4-1",
+          "SetBootOrderFqdd3": "",
+          #"SetBootOrderFqdd4": "InfiniBand.Slot.4-2",
+          "SetBootOrderFqdd4": "",
+        }
+    bios_result = None
+    if bios_settings:
+        bios_result = client.set_bios_settings(bios_settings)
+        print(bios_result)
 
-    idrac_settings = {
-      "IPMILan.1#Enable": "Enabled",
-    }
-    idrac_result = client.set_idrac_settings(idrac_settings)
-    print(idrac_result)
+    if idrac_settings is None:
+        idrac_settings = {
+          "IPMILan.1#Enable": "Enabled",
+        }
+    idrac_result = None
+    if idrac_settings: 
+        idrac_result = client.set_idrac_settings(idrac_settings)
+        print(idrac_result)
 
     reboot_required = bios_result['is_reboot_required']
-    if bios_result['is_commit_required']:
+    if bios_result and bios_result['is_commit_required']:
         reboot_required = bios_result['is_reboot_required']
         print(client.commit_pending_bios_changes(reboot=reboot_required))
 
-    if idrac_result['is_commit_required']:
+    if idrac_result and idrac_result['is_commit_required']:
         reboot_required = idrac_result['is_reboot_required']
         print(client.commit_pending_idrac_changes(reboot=reboot_required))
 
