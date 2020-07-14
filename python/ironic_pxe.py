@@ -236,7 +236,7 @@ def test_inspector_pxe_boot(conn):
     check_pending(conn, pending)
 
 
-def inspect_nodes(conn):
+def inspect_nodes(conn, target_stage="inspect_1GbE", initial_stage=None):
     nodes = ironic_drac_settings.get_nodes_in_rack(conn, "DR06")
 
     inspecting = []
@@ -248,22 +248,29 @@ def inspect_nodes(conn):
 
         # Skip node if already bootstrapped
         if "bootstrap_stage" in node["extra"] \
-                and node["extra"]["bootstrap_stage"] in ["inspect_1GbE"]:
+                and node["extra"]["bootstrap_stage"] in [target_stage]:
             print("Stage invalid, exiting")
+            continue
+
+        # Skip node if already bootstrapped
+        if "bootstrap_stage" not in node["extra"] \
+                or node["extra"]["bootstrap_stage"] not in [initial_stage]:
+            print("Not ready for inspect stage")
             continue
 
         if node["provision_state"] != "manageable":
             print("Ignoring node, invalid state")
             continue
 
+        if node["is_maintenance"]:
+            print("skip nodes in maintenance")
+            continue
+
         if node["power_state"] == "power on":
             conn.baremetal.set_node_power_state(node, "power off")
 
-        if node["is_maintenance"]:
-            conn.baremetal.unset_node_maintenance(node)
-
         extra = node["extra"]
-        extra["bootstrap_stage"] = "inspect_1GbE"
+        extra["bootstrap_stage"] = target_stage
         patch = [
             {
                 "op": "replace",
@@ -491,6 +498,7 @@ def request_hse_boot(conn):
             }]
         conn.baremetal.patch_node(node, patch)
 
+    # TODO: ideally add a new state for when jobs are complete
     ironic_drac_settings.wait_for_jobs(clients)
 
 
@@ -500,4 +508,5 @@ if __name__ == "__main__":
     #test_inspector_pxe_boot(conn)
     #inspect_nodes(conn)
     #get_inspection_data(conn)
-    request_hse_boot(conn)
+    #request_hse_boot(conn)
+    inspect_nodes(conn, target_stage="inspect_50GbE", initial_stage="boot_on_50GbE")
