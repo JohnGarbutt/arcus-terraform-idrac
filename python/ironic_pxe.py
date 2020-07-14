@@ -302,6 +302,8 @@ def get_inspection_data(conn):
             "service_tag": "",
             "bmc_mac": "",
             "mac": "",
+            "rack": "",
+            "datacentre": "",
         }
 
         idrac_ports = list(conn.network.ports(name=name))
@@ -309,6 +311,8 @@ def get_inspection_data(conn):
             idrac_port = idrac_ports[0]
             if idrac_port["fixed_ips"][0]["ip_address"] == ip:
                 node["bmc_mac"] = idrac_port['mac_address']
+                node["rack"] = [tag for tag in idrac_port["tags"] if "DR" in tag][0]
+                node["datacentre"] = [tag for tag in idrac_port["tags"] if "DC" in tag][0]
 
         extra = raw_node['extra']
         if extra and "system_vendor" in extra:
@@ -361,11 +365,11 @@ def get_inspection_data(conn):
         hse_port = ""
         if hse:
             hse_port = "-p".join([hse.get("host"), hse.get("port")])
-        print(f'WCDC-DH1,DR06,{rack_pos},1,{name},Dell,C6420,'
+        print(f'{node["datacentre"]},{node["rack"]},{rack_pos},1,{name},Dell,C6420,'
               f'{node["service_tag"]},{name},,{mac_noformat},{mac},,'
               f'{bmc_mac_noformat},{bmc_mac},'
               '"all,nodes,cascadelake,csd3,compute-csd3,compute-cascadelake,'
-              'Dell,C6420,csd3-2020q3p1,csd3-2020q3p1-dr06",'
+              f'Dell,C6420,csd3-2020q3p1,csd3-2020q3p1-{node["rack"].lower()}",'
               f'{oob_port},{hse_port}')
 
 
