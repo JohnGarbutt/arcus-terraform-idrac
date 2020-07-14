@@ -315,6 +315,13 @@ def get_inspection_data(conn):
                 node["rack"] = [tag for tag in idrac_port["tags"] if "DR" in tag][0]
                 node["datacentre"] = [tag for tag in idrac_port["tags"] if "DC" in tag][0]
 
+        conn.add_service("baremetal-introspection")
+        inspector = conn.baremetal_introspection
+        response = inspector.get(f"/introspection/{name}/data")
+        if response:
+            node["interfaces"] = list(response.json()["interfaces"].keys())
+            node["hse_interfaces"] = [i for i in node["interfaces"] if "p" in i]
+
         extra = raw_node['extra']
         if extra and "system_vendor" in extra:
             node["service_tag"] = extra['system_vendor'].get('serial_number')
@@ -349,6 +356,11 @@ def get_inspection_data(conn):
         result.append(node)
         #if lldp_count < 2:
         #    result.append(node)
+
+    for node in result:
+        if "hse_interfaces" in node:
+            print(f'{node["name"]}\n{node["interfaces"]}')
+    exit(0)
 
     print(json.dumps(result, indent=2))
     print("dc,rack,rack_pos,height,hardware_name,manufacturer,model,serial,"
