@@ -365,12 +365,14 @@ def get_inspection_data(conn):
         hse_port = ""
         if hse:
             hse_port = "-p".join([hse.get("host"), hse.get("port")])
-        print(f'{node["datacentre"]},{node["rack"]},{rack_pos},1,{name},Dell,C6420,'
-              f'{node["service_tag"]},{name},,{mac_noformat},{mac},,'
-              f'{bmc_mac_noformat},{bmc_mac},'
-              '"all,nodes,cascadelake,csd3,compute-csd3,compute-cascadelake,'
-              f'Dell,C6420,csd3-2020q3p1,csd3-2020q3p1-{node["rack"].lower()}",'
-              f'{oob_port},{hse_port}')
+        node_csv = (
+            f'{node["datacentre"]},{node["rack"]},{rack_pos},1,{name},'
+            f'Dell,C6420,{node["service_tag"]},{name},,'
+            f'{mac_noformat},{mac},,{bmc_mac_noformat},{bmc_mac},'
+            '"all,nodes,cascadelake,csd3,compute-csd3,compute-cascadelake,'
+            f'Dell,C6420,csd3-2020q3p1,csd3-2020q3p1-{node["rack"].lower()}",'
+            f'{oob_port},{hse_port}')
+        print(node_csv)
 
 
 def request_hse_boot(conn):
