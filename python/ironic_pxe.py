@@ -418,8 +418,9 @@ def get_inspection_data(conn):
         inspected_str = json.dumps(inspected)
         if inspected.get("serial") and inspected.get("sn3700c_port") and expected_str != inspected_str:
             print("error:" + name)
-            print("exp:\n" + expected_str)
-            print("ins:\n" + inspected_str)
+            #print("exp:\n" + expected_str)
+            #print("ins:\n" + inspected_str)
+            print("expected: " + expected['s3048_port'] + " found: " + inspected['s3048_port'])
 
 def request_hse_boot(conn):
     nodes = ironic_drac_settings.get_nodes_in_rack(conn, "DR06")
