@@ -440,6 +440,22 @@ def request_hse_boot(conn):
 
     clients = {}
     for node in nodes:
+        if node["provision_state"] != "manageable":
+            print("Ignoring node, invalid state")
+            continue
+
+        name = node["name"]
+
+        # Skip node if already bootstrapped
+        if "bootstrap_stage" in node["extra"]:
+            if node["extra"]["bootstrap_stage"] == "boot_on_50GbE":
+                dclient = get_dracclient(node)
+                clients[name] = dclient
+                continue
+            if node["extra"]["bootstrap_stage"] != "inspect_1GbE":
+                print("Stage invalid, exiting")
+                continue
+
         print("moving to hse boot: " + node.name + " " + node["driver_info"]["drac_address"])
         dclient = get_dracclient(node)
         bios_settings = {
@@ -455,8 +471,22 @@ def request_hse_boot(conn):
         }
         ironic_drac_settings.update_settings(
             dclient, bios_settings, idrac_settings)
-        name = node["name"]
         clients[name] = dclient
+
+        extra = node["extra"]
+        extra["bootstrap_stage"] = "boot_on_50GbE"
+        patch = [
+            {
+                "op": "replace",
+                "path": "inspect_interface",
+                "value": "inspector"
+            },
+            {
+                "op": "replace",
+                "path": "extra",
+                "value": extra
+            }]
+        conn.baremetal.patch_node(node, patch)
 
     ironic_drac_settings.wait_for_jobs(clients)
 
@@ -466,5 +496,5 @@ if __name__ == "__main__":
     conn = openstack.connection.from_config(cloud="arcus", debug=False)
     #test_inspector_pxe_boot(conn)
     #inspect_nodes(conn)
-    get_inspection_data(conn)
-    #request_hse_boot(conn)
+    #get_inspection_data(conn)
+    request_hse_boot(conn)
