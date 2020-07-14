@@ -297,9 +297,11 @@ def get_inspection_data(conn):
             "name": name,
             "ip": ip,
             "uuid": raw_node['id'],
-            "ports": {},
+            "ports_by_mac": {},
+            "ports_by_switch": {},
             "service_tag": "",
             "bmc_mac": "",
+            "mac": "",
         }
 
         idrac_ports = list(conn.network.ports(name=name))
@@ -318,10 +320,27 @@ def get_inspection_data(conn):
             if lldp:
                 lldp_count += 1
             mac = raw_port['address']
-            node["ports"][mac] = lldp
-        #result.append(node)
-        if lldp_count < 2:
-            result.append(node)
+            node["ports_by_mac"][mac] = lldp
+
+            if lldp and "GigabitEthernet" in lldp["port_id"]:
+                node["ports_by_switch"]["s3048"] = {
+                    "mac": mac,
+                    "host": lldp["switch_info"],
+                    "port": lldp["port_id"].strip("GigabitEthernet 1/"),
+                }
+            elif lldp and "swp" in lldp["port_id"]:
+                port = lldp["port_id"]
+                if port:
+                    port = port.split("swp")[1]
+                    port = port.split("s")[0]
+                node["ports_by_switch"]["sn3700"] = {
+                    "mac": mac,
+                    "host": lldp["switch_info"],
+                    "port": port,
+                }
+        result.append(node)
+        #if lldp_count < 2:
+        #    result.append(node)
 
     print(json.dumps(result, indent=2))
     print("dc,rack,rack_pos,height,hardware_name,manufacturer,model,serial,"
@@ -330,8 +349,24 @@ def get_inspection_data(conn):
     for node in result:
         name = node["name"]
         rack_pos = name.split("u")[1]
+        oob = node["ports_by_switch"].get("s3048", {})
+        mac = oob.get("mac", "")
+        mac_noformat = mac.replace(":","")
+        bmc_mac = node.get("bmc_mac", "")
+        bmc_mac_noformat = bmc_mac.replace(":", "")
+        hse = node["ports_by_switch"].get("sn3700", {})
+        oob_port = ""
+        if oob:
+            oob_port = "-p".join([oob.get("host"), oob.get("port")])
+        hse_port = ""
+        if hse:
+            hse_port = "-p".join([hse.get("host"), hse.get("port")])
         print(f'WCDC-DH1,DR06,{rack_pos},1,{name},Dell,C6420,'
-              f'{node["service_tag"]},{name},,')
+              f'{node["service_tag"]},{name},,{mac_noformat},{mac},,'
+              f'{bmc_mac_noformat},{bmc_mac},'
+              '"all,nodes,cascadelake,csd3,compute-csd3,compute-cascadelake,'
+              'Dell,C6420,csd3-2020q3p1,csd3-2020q3p1-dr06",'
+              f'{oob_port},{hse_port}')
 
 
 def request_hse_boot(conn):
