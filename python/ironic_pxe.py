@@ -436,7 +436,6 @@ def get_inspection_data(conn):
 
 def request_hse_boot(conn):
     nodes = ironic_drac_settings.get_nodes_in_rack(conn, "DR06")
-    nodes = nodes[:1]
 
     clients = {}
     for node in nodes:
@@ -455,6 +454,10 @@ def request_hse_boot(conn):
             if node["extra"]["bootstrap_stage"] != "inspect_1GbE":
                 print("Stage invalid, exiting")
                 continue
+
+        if node["is_maintenance"]:
+            print("Skip nodes in maintenance")
+            continue
 
         print("moving to hse boot: " + node.name + " " + node["driver_info"]["drac_address"])
         dclient = get_dracclient(node)
