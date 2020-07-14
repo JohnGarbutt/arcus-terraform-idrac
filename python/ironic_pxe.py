@@ -305,6 +305,7 @@ def get_inspection_data(conn):
             "rack": "",
             "datacentre": "",
         }
+        node["rack_pos"] = name.split("u")[1]
 
         idrac_ports = list(conn.network.ports(name=name))
         if len(idrac_ports) == 1:
@@ -327,10 +328,13 @@ def get_inspection_data(conn):
             node["ports_by_mac"][mac] = lldp
 
             if lldp and "GigabitEthernet" in lldp["port_id"]:
+                port = lldp["port_id"]
+                if port:
+                    port = port.split("GigabitEthernet 1/")[1]
                 node["ports_by_switch"]["s3048"] = {
                     "mac": mac,
                     "host": lldp["switch_info"],
-                    "port": lldp["port_id"].strip("GigabitEthernet 1/"),
+                    "port": port,
                 }
             elif lldp and "swp" in lldp["port_id"]:
                 port = lldp["port_id"]
@@ -350,13 +354,14 @@ def get_inspection_data(conn):
     print("dc,rack,rack_pos,height,hardware_name,manufacturer,model,serial,"
           "name,ip,mac_noformat,mac,bmc_ip,bmc_mac_noformat,bmc_mac,"
           "nodetype,groups,s3048_port,sn3700c_port")
+    csv = {}
+    csv_structured = {}
     for node in result:
         name = node["name"]
-        rack_pos = name.split("u")[1]
         oob = node["ports_by_switch"].get("s3048", {})
-        mac = oob.get("mac", "")
+        mac = oob.get("mac", "").upper()
         mac_noformat = mac.replace(":","")
-        bmc_mac = node.get("bmc_mac", "")
+        bmc_mac = node.get("bmc_mac", "").upper()
         bmc_mac_noformat = bmc_mac.replace(":", "")
         hse = node["ports_by_switch"].get("sn3700", {})
         oob_port = ""
@@ -365,15 +370,56 @@ def get_inspection_data(conn):
         hse_port = ""
         if hse:
             hse_port = "-p".join([hse.get("host"), hse.get("port")])
+        groups = (
+            'all,nodes,cascadelake,csd3,compute-csd3,compute-cascadelake,'
+            f'Dell,C6420,csd3-2020q3p1,csd3-2020q3p1-{node["rack"].lower()}'
+        )
         node_csv = (
-            f'{node["datacentre"]},{node["rack"]},{rack_pos},1,{name},'
-            f'Dell,C6420,{node["service_tag"]},{name},,'
+            f'{node["datacentre"]},{node["rack"]},{node["rack_pos"]},1,'
+            f'{name},Dell,C6420,{node["service_tag"]},{name},,'
             f'{mac_noformat},{mac},,{bmc_mac_noformat},{bmc_mac},'
-            '"all,nodes,cascadelake,csd3,compute-csd3,compute-cascadelake,'
-            f'Dell,C6420,csd3-2020q3p1,csd3-2020q3p1-{node["rack"].lower()}",'
-            f'{oob_port},{hse_port}')
+            f'{groups},{oob_port},{hse_port}')
+        csv[name] = node_csv
+        csv_structured[name] = {
+            "dc": node["datacentre"],
+            "rack": node["rack"],
+            "rack_pos": node["rack_pos"],
+            "height": "1",
+            "hardware_name": node["name"],
+            "manufacturer": "Dell",
+            "model": "C6420",
+            "serial": node["service_tag"],
+            "name": node["name"],
+            "ip": "",
+            "mac_noformat": mac_noformat,
+            "mac": mac,
+            "bmc_ip": "",
+            "bmc_mac_noformat": bmc_mac_noformat,
+            "bmc_mac": bmc_mac,
+            "nodetype": "server",
+            "groups": groups,
+            "s3048_port": oob_port,
+            "sn3700c_port": hse_port,
+        }
         print(node_csv)
 
+
+    import csv
+    nodes = {}
+    with open("DR06.csv") as csvfile:
+        rows = csv.DictReader(csvfile)
+        for row in rows:
+            nodes[row["name"]] = row
+    #print(json.dumps(nodes, indent=2))
+    for name, expected in nodes.items():
+        expected["ip"] = expected["ip"].strip()
+        expected_str = json.dumps(expected)
+        inspected = csv_structured.get(name, {})
+        inspected_str = json.dumps(inspected)
+        if inspected.get("serial") and inspected.get("sn3700c_port") and expected_str != inspected_str:
+            print("error:" + name)
+            print("exp:\n" + expected_str)
+            print("ins:\n" + inspected_str)
 
 def request_hse_boot(conn):
     nodes = ironic_drac_settings.get_nodes_in_rack(conn, "DR06")
