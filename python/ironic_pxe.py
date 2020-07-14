@@ -298,7 +298,15 @@ def get_inspection_data(conn):
             "ip": ip,
             "uuid": raw_node['id'],
             "ports": {},
+            "service_tag": "",
+            "bmc_mac": "",
         }
+
+        idrac_ports = list(conn.network.ports(name=name))
+        if len(idrac_ports) == 1:
+            idrac_port = idrac_ports[0]
+            if idrac_port["fixed_ips"][0]["ip_address"] == ip:
+                node["bmc_mac"] = idrac_port['mac_address']
 
         extra = raw_node['extra']
         if extra and "system_vendor" in extra:
@@ -316,6 +324,14 @@ def get_inspection_data(conn):
             result.append(node)
 
     print(json.dumps(result, indent=2))
+    print("dc,rack,rack_pos,height,hardware_name,manufacturer,model,serial,"
+          "name,ip,mac_noformat,mac,bmc_ip,bmc_mac_noformat,bmc_mac,"
+          "nodetype,groups,s3048_port,sn3700c_port")
+    for node in result:
+        name = node["name"]
+        rack_pos = name.split("u")[1]
+        print(f'WCDC-DH1,DR06,{rack_pos},1,{name},Dell,C6420,'
+              f'{node["service_tag"]},{name},,')
 
 
 def request_hse_boot(conn):
@@ -350,5 +366,5 @@ if __name__ == "__main__":
     conn = openstack.connection.from_config(cloud="arcus", debug=False)
     #test_inspector_pxe_boot(conn)
     #inspect_nodes(conn)
-    #get_inspection_data(conn)
-    request_hse_boot(conn)
+    get_inspection_data(conn)
+    #request_hse_boot(conn)
