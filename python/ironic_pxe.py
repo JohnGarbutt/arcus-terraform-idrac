@@ -605,6 +605,25 @@ def set_expected_bios_version(conn, version="2.5.4"):
             conn.baremetal.patch_node(node, patch)
 
 
+def reset_after_failed_clean(conn):
+    nodes = ironic_drac_settings.get_nodes_in_rack(conn, "DR06")
+
+    pending = []
+    for node in nodes:
+        if node["provision_state"] != "clean failed":
+            print("Ignoring node, invalid state")
+            continue
+        print("moving to manageable: " + node.name + " " + node["driver_info"]["drac_address"])
+        if node["is_maintenance"]:
+            conn.baremetal.unset_node_maintenance(node)
+        if node["power_state"] == "power on":
+            conn.baremetal.set_node_power_state(node, "power off")
+        conn.baremetal.set_node_provision_state(node, 'manage')
+        pending.append(node)
+
+    conn.baremetal.wait_for_nodes_provision_state(pending, 'manageable')
+
+
 def move_to_available(conn):
     nodes = ironic_drac_settings.get_nodes_in_rack(conn, "DR06")
 
@@ -650,5 +669,6 @@ if __name__ == "__main__":
     #request_hse_boot(conn)
     #inspect_nodes(conn, target_stage="inspect_50GbE", initial_stage="boot_on_50GbE")
     #boot_on_cleaning_net(conn)
-    set_expected_bios_version(conn)  #TODO: new inspection rule should do that
+    #set_expected_bios_version(conn)  #TODO: new inspection rule should do that
     #move_to_available(conn)
+    reset_after_failed_clean(conn)
