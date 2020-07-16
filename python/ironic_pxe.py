@@ -435,11 +435,12 @@ def get_inspection_data(conn):
         expected_str = json.dumps(expected)
         inspected = csv_structured.get(name, {})
         inspected_str = json.dumps(inspected)
-        if inspected.get("serial") and inspected.get("sn3700c_port") and expected_str != inspected_str:
-            print("error:" + name)
-            #print("exp:\n" + expected_str)
-            #print("ins:\n" + inspected_str)
-            print("expected: " + expected['s3048_port'] + " found: " + inspected['s3048_port'])
+        has_50GbE_up = inspected.get("serial") and inspected.get("sn3700c_port")
+        if expected_str != inspected_str:
+            print("error: " + name)
+            print("exp: " + expected_str)
+            print("ins: " + inspected_str)
+            #print("expected: " + expected['s3048_port'] + " found: " + inspected['s3048_port'])
 
 def request_hse_boot(conn):
     nodes = ironic_drac_settings.get_nodes_in_rack(conn, "DR06")
@@ -454,13 +455,16 @@ def request_hse_boot(conn):
 
         # Skip node if already bootstrapped
         if "bootstrap_stage" in node["extra"]:
-            if node["extra"]["bootstrap_stage"] == "boot_on_50GbE":
+            if node["extra"]["bootstrap_stage"] == "boot_on_50GbE_no_1G":
                 dclient = get_dracclient(node)
                 clients[name] = dclient
                 continue
             if node["extra"]["bootstrap_stage"] != "inspect_1GbE":
                 print("Stage invalid, exiting")
                 continue
+            #if node["extra"]["bootstrap_stage"] != "inspect_50GbE":
+            #    print("Stage invalid, exiting")
+            #    continue
 
         if node["is_maintenance"]:
             print("Skip nodes in maintenance")
@@ -471,11 +475,12 @@ def request_hse_boot(conn):
         bios_settings = {
           "LogicalProc": "Disabled",
           "SysProfile": "PerfOptimized",
+          "EmbNic1": "DisabledOs",
           #"SetBootOrderEn": "NIC.Slot.4-1,InfiniBand.Slot.4-1,NIC.Embedded.1-1-1,HardDisk.List.1-1",
           "SetBootOrderFqdd1": "NIC.Slot.4-1",
           "SetBootOrderFqdd2": "HardDisk.List.1-1",
-          "SetBootOrderFqdd3": "InfiniBand.Slot.4-1",
-          "SetBootOrderFqdd4": "NIC.Embedded.1-1-1",
+          "SetBootOrderFqdd3": "",
+          "SetBootOrderFqdd4": "",
         }
         idrac_settings={
         }
@@ -484,7 +489,7 @@ def request_hse_boot(conn):
         clients[name] = dclient
 
         extra = node["extra"]
-        extra["bootstrap_stage"] = "boot_on_50GbE"
+        extra["bootstrap_stage"] = "boot_on_50GbE_no_1G"
         patch = [
             {
                 "op": "replace",
@@ -502,11 +507,108 @@ def request_hse_boot(conn):
     ironic_drac_settings.wait_for_jobs(clients)
 
 
+def manual_setup_port_inspection(conn, node):
+    ports = list(conn.baremetal.ports(node=node.id))
+    pxe_mac = node["extra"]["pxe_interface_mac"]
+    ports = [port for port in ports if port['address'] == pxe_mac]
+    if len(ports) != 1:
+        # FIXME: user logger
+        print("Bailing out: port count is not 1")
+        sys.exit(1)
+
+    mac = ports[0]["address"]
+
+    existing_ports = list(conn.network.ports(mac_address=mac))
+    if existing_ports:
+        if len(existing_ports) != 1:
+            print("found too many ports")
+            sys.exit(1)
+        port = existing_ports[0]
+        if port["name"] != f'{node["name"]}-pxe':
+            print("detected duplicate mac")
+            sys.exit(2)
+        print("found existing port: " + mac)
+        # TODO: conn.network.delete_port(port)
+        return port
+
+    dhcp_extras = [
+        {
+            'opt_name': 'tag:ipxe,67',
+            #'opt_value': 'http://10.225.1.1:8089/inspector.ipxe',
+            'opt_value': 'http://10.225.1.1:8089/arcus.ipxe',
+            'ip_version': 4
+        },
+        {
+            'opt_name': '66',
+            'opt_value': '10.225.1.1',
+            'ip_version': 4
+        },
+        {
+            'opt_name': '150',
+            'opt_value': '10.225.1.1',
+            'ip_version': 4
+        },
+        {
+            'opt_name': 'tag:!ipxe,67',
+            'opt_value': 'undionly.kpxe',
+            'ip_version': 4
+        },
+        {
+            'opt_name': 'server-ip-address',
+            'opt_value': '10.225.1.1',
+            'ip_version': 4
+        },
+    ]
+    network_name = "cleaning-net"
+    network = conn.network.find_network(network_name)
+    port = conn.network.create_port(
+        name=f'{node["name"]}-pxe-{network_name}', mac_address=mac,
+        network_id=network["id"],
+        extra_dhcp_opts=dhcp_extras,
+    )
+    conn.network.set_tags(port, ["pxe-bootstrap"])
+    print("created a new port: " + mac)
+    return port
+
+
+def boot_on_cleaning_net(conn):
+    nodes = ironic_drac_settings.get_nodes_in_rack(conn, "DR06")
+    nodes = nodes[1:2]
+    print(nodes[0])
+    exit(-1)
+
+    clients = {}
+    for node in nodes:
+        if node["provision_state"] != "manageable":
+            print("Ignoring node, invalid state")
+            continue
+        manual_setup_port_inspection(conn, node)
+
+
+def set_expected_bios_version(conn, version="2.5.4"):
+    nodes = ironic_drac_settings.get_nodes_in_rack(conn, "DR06")
+
+    for node in nodes:
+        vendor = node.get("system_vendor")
+        if vendor and "bios_version" not in vendor:
+            vendor['bios_version'] = version
+            patch = [
+                {
+                    "op": "replace",
+                    "path": "system_vendor",
+                    "value": vendor
+                }]
+            print(f"patching node {node['name']}")
+            conn.baremetal.patch_node(node, patch)
+
+
 if __name__ == "__main__":
     openstack.enable_logging(True, stream=sys.stdout)
     conn = openstack.connection.from_config(cloud="arcus", debug=False)
     #test_inspector_pxe_boot(conn)
     #inspect_nodes(conn)
-    #get_inspection_data(conn)
+    get_inspection_data(conn)
     #request_hse_boot(conn)
-    inspect_nodes(conn, target_stage="inspect_50GbE", initial_stage="boot_on_50GbE")
+    #inspect_nodes(conn, target_stage="inspect_50GbE", initial_stage="boot_on_50GbE_no_1G")
+    #boot_on_cleaning_net(conn)
+    #set_expected_bios_version(conn)

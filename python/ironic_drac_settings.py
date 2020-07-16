@@ -141,9 +141,10 @@ if __name__ == "__main__":
             host=ip,
             username="root",
             password="calvin")
-        #print(json.dumps(get_all_settings(client), indent=2))
+        print(json.dumps(get_all_settings(client), indent=2))
+        exit(0)
         print("Try BIOS Update for " + ip + " " + name)
-        update_settings(client)
+        #update_settings(client)
         print("Submitted BIOS Update for " + ip + " " + name)
         clients[name] = client
 
