@@ -364,10 +364,10 @@ def get_inspection_data(conn):
         #if lldp_count < 2:
         #    result.append(node)
 
-    for node in result:
-        if "hse_interfaces" in node:
-            print(f'{node["name"]}\n{node["interfaces"]}')
-    exit(0)
+    #for node in result:
+    #    if "hse_interfaces" in node:
+    #        print(f'{node["name"]}\n{node["interfaces"]}')
+    #exit(0)
 
     print(json.dumps(result, indent=2))
     print("dc,rack,rack_pos,height,hardware_name,manufacturer,model,serial,"
@@ -438,9 +438,10 @@ def get_inspection_data(conn):
         has_50GbE_up = inspected.get("serial") and inspected.get("sn3700c_port")
         if expected_str != inspected_str:
             print("error: " + name)
-            print("exp: " + expected_str)
-            print("ins: " + inspected_str)
-            #print("expected: " + expected['s3048_port'] + " found: " + inspected['s3048_port'])
+            #print("exp: " + expected_str)
+            #print("ins: " + inspected_str)
+            print("1  expected: " + expected['s3048_port'] + " found: " + inspected['s3048_port'])
+            #print("50 expected: " + expected['sn3700c_port'] + " found: " + inspected['sn3700c_port'])
 
 def request_hse_boot(conn):
     nodes = ironic_drac_settings.get_nodes_in_rack(conn, "DR06")
