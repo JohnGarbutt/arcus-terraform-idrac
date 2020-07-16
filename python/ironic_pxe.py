@@ -456,7 +456,7 @@ def request_hse_boot(conn):
 
         # Skip node if already bootstrapped
         if "bootstrap_stage" in node["extra"]:
-            if node["extra"]["bootstrap_stage"] == "boot_on_50GbE_no_1G":
+            if node["extra"]["bootstrap_stage"] == "boot_on_50GbE":
                 dclient = get_dracclient(node)
                 clients[name] = dclient
                 continue
@@ -490,7 +490,7 @@ def request_hse_boot(conn):
         clients[name] = dclient
 
         extra = node["extra"]
-        extra["bootstrap_stage"] = "boot_on_50GbE_no_1G"
+        extra["bootstrap_stage"] = "boot_on_50GbE"
         patch = [
             {
                 "op": "replace",
@@ -590,17 +590,55 @@ def set_expected_bios_version(conn, version="2.5.4"):
     nodes = ironic_drac_settings.get_nodes_in_rack(conn, "DR06")
 
     for node in nodes:
-        vendor = node.get("system_vendor")
-        if vendor and "bios_version" not in vendor:
-            vendor['bios_version'] = version
+        vendor = node["extra"].get("system_vendor")
+        if not vendor:
+            print(f"node in bad state: {node['name']}")
+        elif "bios_version" not in vendor:
+            print("setting bios")
             patch = [
                 {
-                    "op": "replace",
-                    "path": "system_vendor",
-                    "value": vendor
+                    "op": "add",
+                    "path": "extra/system_vendor/bios_version",
+                    "value": version
                 }]
             print(f"patching node {node['name']}")
             conn.baremetal.patch_node(node, patch)
+
+
+def move_to_available(conn):
+    nodes = ironic_drac_settings.get_nodes_in_rack(conn, "DR06")
+
+    pending = []
+    for node in nodes:
+        if node["provision_state"] != "manageable":
+            print("Ignoring node, invalid state")
+            continue
+
+        name = node["name"]
+
+        # Skip node if already bootstrapped
+        if "bootstrap_stage" in node["extra"]:
+            if node["extra"]["bootstrap_stage"] == "boot_on_50GbE":
+                dclient = get_dracclient(node)
+                clients[name] = dclient
+                continue
+            if node["extra"]["bootstrap_stage"] not in ["inspect_50GbE", "boot_on_50GbE_no_1G"]:
+                print("Stage invalid, exiting")
+                continue
+            #if node["extra"]["bootstrap_stage"] != "inspect_50GbE":
+            #    print("Stage invalid, exiting")
+            #    continue
+
+        if node["is_maintenance"]:
+            print("Skip nodes in maintenance")
+            continue
+
+        print("moving to available: " + node.name + " " + node["driver_info"]["drac_address"])
+        conn.baremetal.set_node_provision_state(node, 'provide')
+        pending.append(node)
+        time.sleep(2)
+
+    conn.baremetal.wait_for_nodes_provision_state(pending, 'available')
 
 
 if __name__ == "__main__":
@@ -608,8 +646,9 @@ if __name__ == "__main__":
     conn = openstack.connection.from_config(cloud="arcus", debug=False)
     #test_inspector_pxe_boot(conn)
     #inspect_nodes(conn)
-    get_inspection_data(conn)
+    #get_inspection_data(conn)
     #request_hse_boot(conn)
-    #inspect_nodes(conn, target_stage="inspect_50GbE", initial_stage="boot_on_50GbE_no_1G")
+    #inspect_nodes(conn, target_stage="inspect_50GbE", initial_stage="boot_on_50GbE")
     #boot_on_cleaning_net(conn)
-    #set_expected_bios_version(conn)
+    set_expected_bios_version(conn)  #TODO: new inspection rule should do that
+    #move_to_available(conn)
