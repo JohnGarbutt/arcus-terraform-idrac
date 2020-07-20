@@ -49,6 +49,8 @@ def update_settings(client, bios_settings=None, idrac_settings=None):
           "SetBootOrderFqdd3": "",
           #"SetBootOrderFqdd4": "InfiniBand.Slot.4-2",
           "SetBootOrderFqdd4": "",
+          #"EmbNic1": "DisabledOs",
+          "EmbNic1": "Enabled", # this is the default
         }
     bios_result = None
     if bios_settings:
