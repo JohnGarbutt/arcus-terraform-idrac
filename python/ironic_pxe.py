@@ -624,7 +624,7 @@ def reset_after_failed_clean(conn):
     conn.baremetal.wait_for_nodes_provision_state(pending, 'manageable')
 
 
-def abort_clean(conn):
+def move_back_to_manageable(conn):
     nodes = ironic_drac_settings.get_nodes_in_rack(conn, "DR06")
 
     pending = []
@@ -636,7 +636,7 @@ def abort_clean(conn):
         conn.baremetal.set_node_provision_state(node, 'manage')
         pending.append(node)
 
-    conn.baremetal.wait_for_nodes_provision_state(pending, 'clean failed')
+    conn.baremetal.wait_for_nodes_provision_state(pending, 'manageable')
 
 
 def move_to_available(conn):
@@ -692,6 +692,6 @@ if __name__ == "__main__":
     #inspect_nodes(conn, target_stage="inspect_50GbE", initial_stage="boot_on_50GbE")
     #boot_on_cleaning_net(conn)
     #set_expected_bios_version(conn)  #TODO: new inspection rule should do that
-    move_to_available(conn)
+    #move_to_available(conn)
     #reset_after_failed_clean(conn)
-    #abort_clean(conn)
+    move_back_to_manageable(conn)
