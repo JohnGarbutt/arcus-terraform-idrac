@@ -2,7 +2,7 @@ openstacksdk
 python-openstackclient
 python-ironicclient
 python-ironic-inspector-client
-python-dracclient>=3.1.0
-sushy>=2.0.0
+python-dracclient>=4.0.0
+sushy>=3.3.0
 redfishtool
 jinja2
