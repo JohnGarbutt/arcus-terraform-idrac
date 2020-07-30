@@ -14,6 +14,7 @@ a similar format directly from an inventory spreadsheet
 or similar. Either way you can use the rest of the ansible
 once we have an appropriate inventory.
 """
+import json
 import sys
 
 import jinja2
@@ -62,8 +63,8 @@ bmc_type=idrac
 
 [baremetal-compute:children]
 {{ rack }}
-"""
 
+"""
     env = jinja2.Environment()
     template = env.from_string(template_str)
     return template.render(nodes=nodes, rack=rack)
@@ -81,5 +82,8 @@ if __name__ == "__main__":
     rack = "DR06"
     raw_ports = get_ports(conn, rack)
     nodes = extract_nodes_from_ports(raw_ports)
+    print(json.dumps(nodes, indent=2))
+
     inventory = generate_inventory(nodes, rack)
-    print(inventory)
+    with open("inventory", "w") as f:
+        f.write(inventory)
