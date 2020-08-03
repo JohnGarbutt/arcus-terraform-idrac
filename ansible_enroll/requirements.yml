@@ -1,7 +1,4 @@
 ---
 collections:
 - name: openstack.cloud
-
-roles:
-  # Install a collection from Ansible Galaxy.
-  - dellemc.openmanage
+- name: dellemc.openmanage
