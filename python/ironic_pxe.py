@@ -586,14 +586,14 @@ def boot_on_cleaning_net(conn):
         manual_setup_port_inspection(conn, node)
 
 
-def set_expected_bios_version(conn, version="2.5.4"):
+def set_expected_bios_version(conn, version="2.6.3"):
     nodes = ironic_drac_settings.get_nodes_in_rack(conn, "DR06")
 
     for node in nodes:
         vendor = node["extra"].get("system_vendor")
         if not vendor:
             print(f"node in bad state: {node['name']}")
-        elif "bios_version" not in vendor:
+        elif vendor.get("bios_version") != version:
             print("setting bios")
             patch = [
                 {
@@ -618,8 +618,11 @@ def reset_after_failed_clean(conn):
             conn.baremetal.unset_node_maintenance(node)
         if node["power_state"] == "power on":
             conn.baremetal.set_node_power_state(node, "power off")
-        conn.baremetal.set_node_provision_state(node, 'manage')
-        pending.append(node)
+        try:
+            conn.baremetal.set_node_provision_state(node, 'manage')
+            pending.append(node)
+        except openstack.exceptions.ConflictException as e:
+            print(e)
 
     conn.baremetal.wait_for_nodes_provision_state(pending, 'manageable')
 
@@ -692,6 +695,6 @@ if __name__ == "__main__":
     #inspect_nodes(conn, target_stage="inspect_50GbE", initial_stage="boot_on_50GbE")
     #boot_on_cleaning_net(conn)
     #set_expected_bios_version(conn)  #TODO: new inspection rule should do that
-    move_to_available(conn)
-    #reset_after_failed_clean(conn)
-    #move_back_to_manageable(conn)
+    #move_to_available(conn)
+    reset_after_failed_clean(conn)
+    move_back_to_manageable(conn)
