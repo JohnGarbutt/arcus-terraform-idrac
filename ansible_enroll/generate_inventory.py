@@ -56,7 +56,7 @@ def extract_nodes_from_ports(raw_ports):
 def generate_inventory(nodes, rack):
     template_str = """[{{ rack }}]
 {% for node in nodes -%}
-{{ node.name }} bmc_address={{ node.ip }} bmc_mac={{ node.mac }}
+{{ node.name }} bmc_address={{ node.ip }} idrac_ip={{ node.ip}} bmc_mac={{ node.mac }}
 {% endfor %}
 
 [{{ rack }}:vars]
@@ -71,6 +71,16 @@ bmc_type=idrac
     return template.render(nodes=nodes, rack=rack)
 
 
+def write_inventory_for_rack(conn, rack):
+    raw_ports = get_ports(conn, rack)
+    nodes = extract_nodes_from_ports(raw_ports)
+    print(json.dumps(nodes, indent=2))
+
+    inventory = generate_inventory(nodes, rack)
+    with open(f"inventory/{rack}", "w") as f:
+        f.write(inventory)
+
+
 if __name__ == "__main__":
     openstack.enable_logging(True, stream=sys.stdout)
     try:
@@ -80,11 +90,4 @@ if __name__ == "__main__":
         print("falling back to test data")
         conn = None
 
-    rack = "DR06"
-    raw_ports = get_ports(conn, rack)
-    nodes = extract_nodes_from_ports(raw_ports)
-    print(json.dumps(nodes, indent=2))
-
-    inventory = generate_inventory(nodes, rack)
-    with open("inventory", "w") as f:
-        f.write(inventory)
+    write_inventory_for_rack(conn, "DR06")

@@ -674,10 +674,10 @@ def move_to_available(conn):
         print("moving to available: " + node.name + " " + node["driver_info"]["drac_address"])
         conn.baremetal.set_node_provision_state(node, 'provide')
         pending.append(node)
-        time.sleep(2)
+        #time.sleep(2)
 
-        if len(pending) >= 50:
-            break
+        #if len(pending) >= 4:
+        #    break
 
     conn.baremetal.wait_for_nodes_provision_state(pending, 'available')
 
@@ -692,6 +692,6 @@ if __name__ == "__main__":
     #inspect_nodes(conn, target_stage="inspect_50GbE", initial_stage="boot_on_50GbE")
     #boot_on_cleaning_net(conn)
     #set_expected_bios_version(conn)  #TODO: new inspection rule should do that
-    #move_to_available(conn)
+    move_to_available(conn)
     #reset_after_failed_clean(conn)
-    move_back_to_manageable(conn)
+    #move_back_to_manageable(conn)
