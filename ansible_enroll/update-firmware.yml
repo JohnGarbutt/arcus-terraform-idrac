@@ -1,0 +1,15 @@
+---
+- hosts: all
+  gather_facts: false
+  tasks:
+   - name: Update firmware from repository on a internally hosted HTTP repository.
+     dellemc.openmanage.idrac_firmware:
+        idrac_ip: "{{ idrac_ip }}"
+        idrac_user: "{{ idrac_user }}"
+        idrac_password: "{{ idrac_password }}"
+        share_name: "http://10.202.150.1"
+        reboot: True
+        job_wait: True
+        apply_update: True
+        catalog_file_name: "Catalog.xml"
+     delegate_to: localhost
