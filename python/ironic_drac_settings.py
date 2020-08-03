@@ -143,11 +143,21 @@ if __name__ == "__main__":
             host=ip,
             username="root",
             password="calvin")
-        print(json.dumps(get_all_settings(client), indent=2))
-        exit(0)
-        print("Try BIOS Update for " + ip + " " + name)
+        #print(json.dumps(get_all_settings(client), indent=2))
+        #exit(0)
+        #print("Try BIOS Update for " + ip + " " + name)
         #update_settings(client)
-        print("Submitted BIOS Update for " + ip + " " + name)
-        clients[name] = client
+        #print("Submitted BIOS Update for " + ip + " " + name)
+
+        #double check we can talk to idrac
+        is_working = False
+        try:
+            client.is_idrac_ready()
+            is_working = True
+        except Exception as e:
+            print("ERROR: host %s has error: %s", name, e)
+
+        if is_working:
+            clients[name] = client
 
     wait_for_jobs(clients)

@@ -6,21 +6,36 @@
    - dellemc.openmanage
 
   tasks:
-   - name: Debug
-     debug:
-       msg: Host {{ inventory_hostname }} has {{ idrac_ip }}
-
    - name: Get Installed Firmware Inventory
      dellemc.openmanage.dellemc_get_firmware_inventory:
          idrac_ip: "{{ idrac_ip }}"
          idrac_user: "{{ idrac_user }}"
          idrac_password: "{{ idrac_password }}"
-     register: idrac_firmware
+     register: idrac_firmware_output
      delegate_to: localhost
+
+   - set_fact:
+        idrac_firmware: "{{ idrac_firmware_output['ansible_facts'][idrac_ip]['Firmware Inventory']['Firmware'] }}"
 
    - name: Show firmware
      debug:
-       msg: "{{ idrac_firmware }}"
+       msg: "{{ idrac_firmware_output | to_nice_yaml(indent=2) }}"
+
+   - name: Check BIOS Version not already at target version
+     fail:
+       msg: "{{ inventory_hostname }}: {{ item['ElementName'] }} {{ item['VersionString'] }}"
+     loop: "{{ idrac_firmware_output['ansible_facts'][idrac_ip]['Firmware Inventory']['Firmware'] }}"
+     when: item['ElementName'] == 'BIOS' and item['VersionString'] == '2.6.3'
+
+   - name: Debug
+     debug:
+       msg: Host {{ inventory_hostname }} has {{ idrac_ip }}
+
+   - name: Check BIOS Version not already at target version
+     debug:
+       msg: "{{ inventory_hostname }}: {{ item['ElementName'] }} {{ item['VersionString'] }}"
+     loop: "{{ idrac_firmware_output['ansible_facts'][idrac_ip]['Firmware Inventory']['Firmware'] }}"
+     when: item['ElementName'] == 'BIOS'
 
    - name: Check LC Ready Status
      dellemc_get_lcstatus:
