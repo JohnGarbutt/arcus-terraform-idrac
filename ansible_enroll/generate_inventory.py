@@ -42,7 +42,7 @@ def get_ports(conn, rack):
 
 
 def extract_nodes_from_ports(raw_ports):
-    return [{
+    nodes = [{
             "name": raw_port["name"],
             "mac": raw_port["mac_address"],
             "ip": raw_port["fixed_ips"][0]["ip_address"],
@@ -50,6 +50,7 @@ def extract_nodes_from_ports(raw_ports):
             "datacentre": [tag for tag in raw_port["tags"] if "DC" in tag][0],
         }
         for raw_port in raw_ports]
+    return sorted(nodes, key=lambda x: x["ip"])
 
 
 def generate_inventory(nodes, rack):
