@@ -1,7 +1,34 @@
 ---
-- hosts: all
+- hosts: baremetal-compute
   gather_facts: false
+
+  collections:
+   - dellemc.openmanage
+
   tasks:
+   - name: Debug
+     debug:
+       msg: Host {{ inventory_hostname }} has {{ idrac_ip }}
+
+   - name: Get Installed Firmware Inventory
+     dellemc.openmanage.dellemc_get_firmware_inventory:
+         idrac_ip: "{{ idrac_ip }}"
+         idrac_user: "{{ idrac_user }}"
+         idrac_password: "{{ idrac_password }}"
+     register: idrac_firmware
+     delegate_to: localhost
+
+   - name: Show firmware
+     debug:
+       msg: "{{ idrac_firmware }}"
+
+   - name: Check LC Ready Status
+     dellemc_get_lcstatus:
+       idrac_ip:   "{{ idrac_ip }}"
+       idrac_user: "{{ idrac_user }}"
+       idrac_password:  "{{ idrac_password }}"
+     delegate_to: localhost
+
    - name: Update firmware from repository on a internally hosted HTTP repository.
      dellemc.openmanage.idrac_firmware:
         idrac_ip: "{{ idrac_ip }}"
@@ -12,4 +39,11 @@
         job_wait: True
         apply_update: True
         catalog_file_name: "Catalog.xml"
+     delegate_to: localhost
+
+   - name: Check LC Ready Status
+     dellemc_get_lcstatus:
+       idrac_ip:   "{{ idrac_ip }}"
+       idrac_user: "{{ idrac_user }}"
+       idrac_password:  "{{ idrac_password }}"
      delegate_to: localhost
