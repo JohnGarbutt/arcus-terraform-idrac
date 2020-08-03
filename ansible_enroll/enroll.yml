@@ -1,0 +1,9 @@
+---
+- hosts: baremetal-compute
+  tasks:
+    - openstack.cloud.baremetal_node:
+        cloud: "devstack"
+        delegate_to: localhost
+        state: present
+        name: "{{ inventory_hostname }}"
+        driver: "pxe_ipmitool"
