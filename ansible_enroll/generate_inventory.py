@@ -80,8 +80,12 @@ resource_class=c6420.p8276.m192
 def write_inventory_for_rack(conn, rack):
     raw_ports = get_ports(conn, rack)
     nodes = extract_nodes_from_ports(raw_ports)
-    print(json.dumps(nodes, indent=2))
 
+    if not nodes:
+        print(f"No nodes found in rack {rack}")
+        return
+
+    print(json.dumps(nodes, indent=2))
     inventory = generate_inventory(nodes, rack)
     with open(f"inventory/{rack}", "w") as f:
         f.write(inventory)
