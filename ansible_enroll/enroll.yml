@@ -1,9 +1,20 @@
 ---
-- hosts: baremetal-compute
+- hosts: baremetal-compute[0]
+  connection: local
+  gather_facts: false
   tasks:
+    - baremetal_enroll:
+        #state: present
+        name: "{{ inventory_hostname }}"
+
     - openstack.cloud.baremetal_node:
-        cloud: "devstack"
-        delegate_to: localhost
+        cloud: "arcus"
         state: present
         name: "{{ inventory_hostname }}"
-        driver: "pxe_ipmitool"
+        driver: "idrac"
+        driver_info:
+          power:
+            ipmi_address: "{{ bmc_address }}"
+            ipmi_username: "admin"
+            ipmi_password: "calvin"
+      delegate_to: localhost

@@ -1,5 +1,5 @@
 ---
-- hosts: baremetal-compute
+- hosts: baremetal-compute[0]
   gather_facts: false
 
   collections:
@@ -15,11 +15,13 @@
      delegate_to: localhost
 
    - set_fact:
-        idrac_firmware: "{{ idrac_firmware_output['ansible_facts'][idrac_ip]['Firmware Inventory']['Firmware'] }}"
+         idrac_firmware: "{{ idrac_firmware_output['ansible_facts'][idrac_ip]['Firmware Inventory']['Firmware'] }}"
 
-   - name: Show firmware
-     debug:
-       msg: "{{ idrac_firmware_output | to_nice_yaml(indent=2) }}"
+   - name: Write out firmware status
+     copy:
+       dest: "{{ playbook_dir }}/firmware_{{ idrac_ip }}.yaml"
+       content: "{{ idrac_firmware_output | to_nice_yaml(indent=2) }}"
+     delegate_to: localhost
 
    - name: Check BIOS Version not already at target version
      fail:
@@ -46,7 +48,7 @@
 
    - name: Update firmware from repository on a internally hosted HTTP repository.
      dellemc.openmanage.idrac_firmware:
-        idrac_ip: "{{ idrac_ip }}"
+        idrac_ip: "{{ idrac_ip }}asdf"
         idrac_user: "{{ idrac_user }}"
         idrac_password: "{{ idrac_password }}"
         share_name: "http://10.202.150.1"
