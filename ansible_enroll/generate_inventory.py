@@ -65,6 +65,7 @@ bmc_type=idrac-wsman
 bmc_password=calvin
 bmc_username=admin
 rack_name={{ rack }}
+resource_class=c6420.p8276.m192
 
 [baremetal-compute:children]
 {{ rack }}

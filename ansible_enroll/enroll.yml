@@ -13,6 +13,7 @@
         extra:
           rack: "{{ rack_name }}"
           rack_u: "{{ rack_name }}"
+        resource_class: "{{ resource_class }}"
       register: enrolled_baremetal_node
       delegate_to: localhost # TODO: why does connection: local fail?
 
