@@ -17,3 +17,9 @@
     - name: Debug
       debug:
         msg: "{{ baremetal_node_enroll }}"
+
+    - name: Go to manageable
+      baremetal_node_action:
+        uuid: "{{ baremetal_node_enroll['uuid'] }}"
+        target_state: "manageable"
+      delegate_to: localhost # TODO: why does connection: local fail?
