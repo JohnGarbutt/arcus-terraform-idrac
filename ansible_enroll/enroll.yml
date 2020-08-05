@@ -1,5 +1,5 @@
 ---
-- hosts: baremetal-compute[0]
+- hosts: baremetal-compute
   gather_facts: false
   tasks:
     - name: Enroll node, so we can inspect to discover nics
