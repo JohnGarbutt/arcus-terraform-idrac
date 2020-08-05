@@ -87,8 +87,10 @@ def write_inventory_for_rack(conn, rack):
 
     print(json.dumps(nodes, indent=2))
     inventory = generate_inventory(nodes, rack)
-    with open(f"inventory/{rack}", "w") as f:
+    filename = f"inventory/{rack}"
+    with open(filename, "w") as f:
         f.write(inventory)
+    print(f"Inventory written to: {filename}")
 
 
 if __name__ == "__main__":
