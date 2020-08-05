@@ -126,6 +126,7 @@ def run_module():
             del bios_settings['SetBootOrderFqdd2']
             del bios_settings['SetBootOrderFqdd3']
             del bios_settings['SetBootOrderFqdd4']
+    module.fail_json(msg=f"{bios_settings}")
 
     bios_result = client.set_bios_settings(bios_settings)
     if bios_result and bios_result['is_commit_required']:
