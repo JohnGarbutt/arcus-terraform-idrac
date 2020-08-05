@@ -2,6 +2,9 @@
 - hosts: baremetal-compute
   gather_facts: false
   tasks:
+    - name: Get node info so we can skip if not matching bootstrap stage
+      debug:
+        msg: TODO
     - name: Create ports using 1GbE mac from idrac inspection
       debug:
         msg: TODO
