@@ -131,7 +131,7 @@ def run_module():
                 result['changed'] = False
             elif node['provision_state'] == "enroll":
                 cloud.baremetal.set_node_provision_state(
-                    node=module.params['uuid'],
+                    node=node,
                     target="manage",
                     wait=module.params['wait'])
                 result['changed'] = True
