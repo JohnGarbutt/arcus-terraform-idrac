@@ -14,6 +14,7 @@ a similar format directly from an inventory spreadsheet
 or similar. Either way you can use the rest of the ansible
 once we have an appropriate inventory.
 """
+import argparse
 import json
 import sys
 
@@ -95,4 +96,10 @@ if __name__ == "__main__":
         print("falling back to test data")
         conn = None
 
-    write_inventory_for_rack(conn, "DR06")
+    parser = argparse.ArgumentParser(
+        description='Generate inventory using neutron ports.')
+    parser.add_argument('rack', type=str, default="DR06",
+                        help='the rack to generate the inventory for')
+    args = parser.parse_args()
+
+    write_inventory_for_rack(conn, args.rack)
