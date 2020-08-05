@@ -17,9 +17,22 @@
     - name: Double check firmware and hardware inventory
       debug:
         msg: TODO
-    - name: Update BIOS settings for PXE on 50GbE
-      debug:
-        msg: TODO
+
+    - name: Update BIOS for PXE over 50GbE and dedicated iDRAC LOM
+      idrac_settings:
+        address: "{{ bmc_address }}"
+        username: "{{ bmc_username }}"
+        password: "{{ bmc_password }}"
+        bios:
+          LogicalProc: "Disabled"
+          SysProfile: "PerfOptimized"
+          EmbNic1: "DisabledOs"
+          SetBootOrderFqdd1: "NIC.Slot.4-1"
+          SetBootOrderFqdd2: "HardDisk.List.1-1"
+          SetBootOrderFqdd3: "InfiniBand.Slot.4-1"
+          SetBootOrderFqdd4: ""
+      delegate_to: localhost
+
     - name: Do inband inspection on 50GbE to update pxe_mac
       debug:
         msg: TODO
