@@ -22,5 +22,5 @@
         name: "{{ inventory_hostname }}"
         action: "inspect"
         skip_not_in_stage: ""
-        move_to_stage: "2_inband_inspect"
+        move_to_stage: "2_idrac_inspect"
       delegate_to: localhost
