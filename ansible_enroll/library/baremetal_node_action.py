@@ -113,14 +113,22 @@ def run_module():
         if not node:
             module.fail_json(msg="can't find the node")
 
-        if module.params['target_state'] != "manageable":
-            module.fail_json(msg="unsupported target state")
-        if node['provision_state'] == "enroll":
-            cloud.baremetal.set_node_provision_state(
-                node=module.params['uuid'],
-                target="manage",
-                wait=module.params['wait'])   
-            result['changed'] = True
+        if module.params['target_state'] == "manageable":
+            if node['provision_state'] == "manageable":
+                result['changed'] = False
+            elif node['provision_state'] == "enroll":
+                cloud.baremetal.set_node_provision_state(
+                    node=module.params['uuid'],
+                    target="manage",
+                    wait=module.params['wait'])
+                result['changed'] = True
+            else:
+                module.fail_json(
+                    msg=f"invalid node state {node['provision_state']}",
+                    **result)
+        else:
+            module.fail_json(msg="unsupported target state",
+                             **result)
 
     except openstack.exceptions.OpenStackCloudException as e:
         module.fail_json(msg=str(e), **result)
