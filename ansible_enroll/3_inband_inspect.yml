@@ -14,6 +14,9 @@
     - name: Compare expected cable state to lldp info
       debug:
         msg: TODO
+    - name: Double check firmware and hardware inventory
+      debug:
+        msg: TODO
     - name: Update BIOS settings for PXE on 50GbE
       debug:
         msg: TODO
