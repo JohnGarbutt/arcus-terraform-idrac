@@ -1,0 +1,12 @@
+---
+- hosts: baremetal-compute
+  gather_facts: false
+  tasks:
+    - name: Do inband inspection
+      baremetal_node_action:
+        name: "{{ inventory_hostname }}"
+        target_state: inspect
+        skip_in_maintenance: true
+        skip_not_in_stage: ""
+        move_to_stage: "2_inband_inspect"
+      delegate_to: localhost

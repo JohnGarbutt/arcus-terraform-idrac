@@ -85,10 +85,14 @@ def get_kwargs(module, bmc_type, bmc):
 
 def run_module():
     module_args = dict(
-        uuid=dict(type='str', required=True),
+        name=dict(type='str', required=True),
         target_state=dict(type='str', required=True),
         wait=dict(type='bool', required=False, default=True),
         cloud=dict(type='str', required=False, default='arcus'),
+        skip_in_maintenance=dict(type='bool', optional=True, default=False),
+        # using extra/bootstrap_stage to track progress
+        skip_not_in_stage=dict(type='str', optional=True, default=""),
+        move_to_stage=dict(type='str', optional=True, default=""),
     )
 
     result = dict(
@@ -110,9 +114,18 @@ def run_module():
         cloud = openstack.connection.from_config(
             cloud=module.params['cloud'], debug=True)
         # TODO: check initial state?
-        node = cloud.baremetal.find_node(module.params['uuid'])
+        node = cloud.baremetal.find_node(module.params['name'])
         if not node:
             module.fail_json(msg="can't find the node")
+
+        result['uuid'] = node.id
+        result['provision_state'] = node.provision_state
+        result['is_maintenance'] = node.is_maintenance
+
+        if module.params['skip_in_maintenance']:
+            if node.is_maintenance:
+                module.exit_json(skipped=True, **result)
+        module.exit_json(skipped=True, **result)
 
         if module.params['target_state'] == "manageable":
             if node['provision_state'] == "manageable":
@@ -134,8 +147,6 @@ def run_module():
     except exceptions.OpenStackCloudException as e:
         module.fail_json(msg=str(e), **result)
 
-    if node:
-        result['uuid'] = node.id
     module.exit_json(**result)
 
 

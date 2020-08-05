@@ -23,6 +23,6 @@
 
     - name: Go to manageable
       baremetal_node_action:
-        uuid: "{{ enrolled_baremetal_node['uuid'] }}"
+        name: "{{ inventory_hostname }}"
         target_state: "manageable"
       delegate_to: localhost
