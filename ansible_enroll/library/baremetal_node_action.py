@@ -94,16 +94,11 @@ def run_module():
         skip_not_in_stage=dict(type='str', optional=True, default=""),
         move_to_stage=dict(type='str', optional=True, default=""),
     )
-
-    result = dict(
-        changed=False,
-        uuid='',
-    )
-
     module = AnsibleModule(
         argument_spec=module_args,
         supports_check_mode=True
     )
+    result = {"changed": False, "node": {}}
 
     # Skip if check mode
     if module.check_mode:
@@ -151,7 +146,7 @@ def run_module():
                 result['changed'] = True
             else:
                 module.fail_json(
-                    msg=f"invalid node state {node['provision_state']}",
+                    msg=f"invalid node state: {node['provision_state']}",
                     **result)
 
         elif module.params['action'] == "inspect":
@@ -163,7 +158,7 @@ def run_module():
                 result['changed'] = True
             else:
                 module.fail_json(
-                    msg=f"invalid node state {node['provision_state']}",
+                    msg=f"invalid node state: {node['provision_state']}",
                     **result)
 
         elif module.params['action'] != "":
