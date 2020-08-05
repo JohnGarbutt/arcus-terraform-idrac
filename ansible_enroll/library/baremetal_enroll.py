@@ -62,12 +62,12 @@ def get_node_properties(module):
         driver_info={
           "drac_address": bmc["address"],
           # Starting with default passwords as shipped, updates later
-          "drac_password": "calvin",
-          "drac_username": "root",
+          "drac_password": bmc["password"],
+          "drac_username": bmc["username"],
           "redfish_system_id": "/redfish/v1/Systems/System.Embedded.1",
           "redfish_address": bmc["address"],
-          "redfish_password": "calvin",
-          "redfish_username": "root",
+          "redfish_password": bmc["password"],
+          "redfish_username": bmc["username"],
           "ipmi_address": bmc["address"],
         },
         boot_interface="ipxe",
