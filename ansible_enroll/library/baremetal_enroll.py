@@ -3,7 +3,9 @@
 # Copyright: (c) 2020, StackHPC
 # Apache 2 License
 
+from ansible.module_utils.basic import AnsibleModule
 import openstack
+from openstack import exceptions
 
 ANSIBLE_METADATA = {
     'metadata_version': '0.1',
@@ -49,13 +51,13 @@ uuid:
     returned: always
 '''
 
-from ansible.module_utils.basic import AnsibleModule
 
-
-def get_kwargs(module, bmc_type, bmc):
+def get_node_properties(module):
+    bmc_type = module.params['type']
     if bmc_type != "idrac-wsman":
-        module.fail_json(msg='Unsupported bmc type')
-    return dict(
+        module.fail_json(msg=f'Unsupported bmc type: {bmc_type}')
+    bmc = module.params['bmc']
+    props = dict(
         driver="idrac",
         driver_info={
           "drac_address": bmc["address"],
@@ -82,12 +84,24 @@ def get_kwargs(module, bmc_type, bmc):
         vendor_interface="idrac-wsman",
     )
 
+    def add_optional_prop(name):
+        prop = module.params[name]
+        if prop:
+            props[name] = prop
+
+    add_optional_prop("resource_class")
+    add_optional_prop("extra")
+
+    return props
+
 
 def run_module():
     module_args = dict(
         name=dict(type='str', required=True),
         type=dict(type='str', required=True),
         bmc=dict(type='dict', required=True),
+        resource_class=dict(type='str', required=False),
+        extra=dict(type='dict', required=False),
         cloud=dict(type='str', required=False, default='arcus'),
     )
 
@@ -105,27 +119,34 @@ def run_module():
     if module.check_mode:
         module.exit_json(**result)
 
+    node = None
     try:
         cloud = openstack.connection.from_config(
-            cloud=module.params['cloud'], debug=True)
+            cloud=module.params['cloud'])
         node = cloud.baremetal.find_node(module.params['name'])
 
         if not node:
-            kwargs = get_kwargs(module, module.params['type'], module.params['bmc'])
+            kwargs = get_node_properties(module)
             node = cloud.baremetal.create_node(
                 provision_state="enroll",
                 name=module.params['name'],
                 **kwargs)
             result['changed'] = True
 
-    except openstack.exceptions.OpenStackCloudException as e:
+        # TODO(johngarbutt) patch existing node?
+        # TODO(johngarbutt) delete existing node?
+
+    except exceptions.OpenStackCloudException as e:
         module.fail_json(msg=str(e), **result)
 
-    result['uuid'] = node.id
+    if node:
+        result['uuid'] = node.id
     module.exit_json(**result)
+
 
 def main():
     run_module()
+
 
 if __name__ == '__main__':
     main()

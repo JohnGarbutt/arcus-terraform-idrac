@@ -3,7 +3,9 @@
 # Copyright: (c) 2020, StackHPC
 # Apache 2 License
 
+from ansible.module_utils.basic import AnsibleModule
 import openstack
+from openstack import exceptions
 
 ANSIBLE_METADATA = {
     'metadata_version': '0.1',
@@ -48,8 +50,6 @@ uuid:
     type: str
     returned: always
 '''
-
-from ansible.module_utils.basic import AnsibleModule
 
 
 def get_kwargs(module, bmc_type, bmc):
@@ -105,6 +105,7 @@ def run_module():
     if module.check_mode:
         module.exit_json(**result)
 
+    node = None
     try:
         cloud = openstack.connection.from_config(
             cloud=module.params['cloud'], debug=True)
@@ -130,14 +131,17 @@ def run_module():
             module.fail_json(msg="unsupported target state",
                              **result)
 
-    except openstack.exceptions.OpenStackCloudException as e:
+    except exceptions.OpenStackCloudException as e:
         module.fail_json(msg=str(e), **result)
 
-    result['uuid'] = node.id
+    if node:
+        result['uuid'] = node.id
     module.exit_json(**result)
+
 
 def main():
     run_module()
+
 
 if __name__ == '__main__':
     main()

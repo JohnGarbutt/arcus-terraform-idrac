@@ -4,22 +4,24 @@
   tasks:
     - name: Enroll node, so we can inspect to discover nics
       baremetal_enroll:
-        #state: present
         name: "{{ inventory_hostname }}"
-        type: "idrac-wsman"
+        type: "{{ bmc_type }}"
         bmc:
           address: "{{ bmc_address }}"
-          username: "admin"
-          password: "calvin"
-      register: baremetal_node_enroll
+          username: "{{ bmc_username }}"
+          password: "{{ bmc_password }}"
+        extra:
+          rack: "{{ rack_name }}"
+          rack_u: "{{ rack_name }}"
+      register: enrolled_baremetal_node
       delegate_to: localhost # TODO: why does connection: local fail?
 
     - name: Debug
       debug:
-        msg: "{{ baremetal_node_enroll }}"
+        msg: "{{ enrolled_baremetal_node }}"
 
     - name: Go to manageable
       baremetal_node_action:
-        uuid: "{{ baremetal_node_enroll['uuid'] }}"
+        uuid: "{{ enrolled_baremetal_node['uuid'] }}"
         target_state: "manageable"
-      delegate_to: localhost # TODO: why does connection: local fail?
+      delegate_to: localhost

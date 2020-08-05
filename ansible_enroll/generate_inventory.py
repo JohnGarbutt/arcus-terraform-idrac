@@ -44,6 +44,7 @@ def get_ports(conn, rack):
 def extract_nodes_from_ports(raw_ports):
     nodes = [{
             "name": raw_port["name"],
+            "u": raw_port["name"].split("u")[1],
             "mac": raw_port["mac_address"],
             "ip": raw_port["fixed_ips"][0]["ip_address"],
             "rack": [tag for tag in raw_port["tags"] if "DR" in tag][0],
@@ -56,11 +57,14 @@ def extract_nodes_from_ports(raw_ports):
 def generate_inventory(nodes, rack):
     template_str = """[{{ rack }}]
 {% for node in nodes -%}
-{{ node.name }} bmc_address={{ node.ip }} idrac_ip={{ node.ip}} bmc_mac={{ node.mac }}
+{{ node.name }} bmc_address={{ node.ip }} idrac_ip={{ node.ip}} bmc_mac={{ node.mac }} rack_u={{node.u}}
 {% endfor %}
 
 [{{ rack }}:vars]
-bmc_type=idrac
+bmc_type=idrac-wsman
+bmc_password=calvin
+bmc_username=admin
+rack_name={{ rack }}
 
 [baremetal-compute:children]
 {{ rack }}
