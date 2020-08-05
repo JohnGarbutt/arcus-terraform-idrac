@@ -15,6 +15,7 @@
           SetBootOrderFqdd3: ""
           SetBootOrderFqdd4: ""
           EmbNic1: "Enabled"
+      delegate_to: localhost
 
     - name: Do inband inspection
       baremetal_node_action:
