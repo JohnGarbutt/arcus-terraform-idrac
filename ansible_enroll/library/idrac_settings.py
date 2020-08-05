@@ -120,13 +120,11 @@ def run_module():
         )
         current_settings = to_dict(client.list_bios_settings())
         current = current_settings['SetBootOrderEn']['current_value']
-        module.fail_json(msg=f"{current} {requested}")
         if requested == current:
             del bios_settings['SetBootOrderFqdd1']
             del bios_settings['SetBootOrderFqdd2']
             del bios_settings['SetBootOrderFqdd3']
             del bios_settings['SetBootOrderFqdd4']
-    module.fail_json(msg=f"{bios_settings}")
 
     bios_result = client.set_bios_settings(bios_settings)
     if bios_result and bios_result['is_commit_required']:
