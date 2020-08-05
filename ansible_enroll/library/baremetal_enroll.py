@@ -3,6 +3,8 @@
 # Copyright: (c) 2020, StackHPC
 # Apache 2 License
 
+import openstack
+
 ANSIBLE_METADATA = {
     'metadata_version': '0.1',
     'status': ['preview'],
@@ -52,6 +54,9 @@ from ansible.module_utils.basic import AnsibleModule
 def run_module():
     module_args = dict(
         name=dict(type='str', required=True),
+        type=dict(type='str', required=True),
+        bmc=dict(type='dict', required=True),
+        cloud=dict(type='str', required=False, default='arcus'),
     )
 
     result = dict(
@@ -68,8 +73,13 @@ def run_module():
     if module.check_mode:
         module.exit_json(**result)
 
-    module.fail_json(msg='Not implemented yet!', **result)
+    cloud = openstack.connection.from_config(
+        cloud=module.params['cloud'], debug=True)
+    node = cloud.baremetal.find_node(module.params['name'])
+    if not node:
+        module.fail_json(msg='Not implemented yet!', **result)
 
+    result['uuid'] = node.id
     module.exit_json(**result)
 
 def main():

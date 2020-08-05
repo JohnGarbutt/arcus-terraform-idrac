@@ -1,20 +1,19 @@
 ---
 - hosts: baremetal-compute[0]
-  connection: local
   gather_facts: false
   tasks:
-    - baremetal_enroll:
+    - name: Enroll node, so we can inspect to discover nics
+      baremetal_enroll:
         #state: present
         name: "{{ inventory_hostname }}"
+        type: "idrac-wsme"
+        bmc:
+          address: "{{ bmc_address }}"
+          username: "admin"
+          password: "calvin"
+      register: baremetal_node_enroll
+      delegate_to: localhost # TODO: why does connection: local fail?
 
-    - openstack.cloud.baremetal_node:
-        cloud: "arcus"
-        state: present
-        name: "{{ inventory_hostname }}"
-        driver: "idrac"
-        driver_info:
-          power:
-            ipmi_address: "{{ bmc_address }}"
-            ipmi_username: "admin"
-            ipmi_password: "calvin"
-      delegate_to: localhost
+    - name: Debug
+      debug:
+        msg: "{{ baremetal_node_enroll }}"
