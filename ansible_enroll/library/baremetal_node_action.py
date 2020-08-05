@@ -161,6 +161,10 @@ def run_module():
                     target="inspect",
                     wait=module.params['wait'])
                 result['changed'] = True
+            else:
+                module.fail_json(
+                    msg=f"invalid node state {node['provision_state']}",
+                    **result)
 
         elif module.params['action'] != "":
             module.fail_json(msg="unsupported action")
@@ -168,8 +172,11 @@ def run_module():
         # Update node to mark stage is complete
         new_stage = module.params['move_to_stage']
         if new_stage:
+            op = "replace"
+            if start_bootstrap_stage == "":
+                op = "add"
             patch = [{
-                "op": "replace",
+                "op": op,
                 "path": "extra/bootstrap_stage",
                 "value": new_stage
             }]
