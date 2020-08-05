@@ -86,10 +86,10 @@ def get_kwargs(module, bmc_type, bmc):
 def run_module():
     module_args = dict(
         name=dict(type='str', required=True),
-        target_state=dict(type='str', required=True),
+        action=dict(type='str', required=False, default=""),
         wait=dict(type='bool', required=False, default=True),
         cloud=dict(type='str', required=False, default='arcus'),
-        skip_in_maintenance=dict(type='bool', optional=True, default=False),
+        skip_in_maintenance=dict(type='bool', optional=True, default=True),
         # using extra/bootstrap_stage to track progress
         skip_not_in_stage=dict(type='str', optional=True, default=""),
         move_to_stage=dict(type='str', optional=True, default=""),
@@ -109,7 +109,6 @@ def run_module():
     if module.check_mode:
         module.exit_json(**result)
 
-    node = None
     try:
         cloud = openstack.connection.from_config(
             cloud=module.params['cloud'], debug=True)
@@ -118,15 +117,30 @@ def run_module():
         if not node:
             module.fail_json(msg="can't find the node")
 
-        result['uuid'] = node.id
-        result['provision_state'] = node.provision_state
-        result['is_maintenance'] = node.is_maintenance
+        extra = node["extra"]
+        start_bootstrap_stage = extra.get("bootstrap_stage", "")
+        result['node'] = {
+            "uuid": node.id,
+            "provision_state": node.provision_state,
+            "is_maintenance": node.is_maintenance,
+            "start_bootstrap_stage": start_bootstrap_stage,
+        }
 
+        # Skip if in maintenance
         if module.params['skip_in_maintenance']:
             if node.is_maintenance:
-                module.exit_json(skipped=True, **result)
+                module.exit_json(mgs="Skip as node in maintenance",
+                                 skipped=True, **result)
 
-        if module.params['target_state'] == "manageable":
+        # Skip if not in requested bootstrap stage
+        requested_start_stage = module.params['skip_not_in_stage']
+        if start_bootstrap_stage != requested_start_stage:
+            module.exit_json(
+                msg=f"Skip as in stage {start_bootstrap_stage}",
+                skipped=True, **result)
+
+        # Update provision state
+        if module.params['action'] == "manage":
             if node['provision_state'] == "manageable":
                 result['changed'] = False
             elif node['provision_state'] == "enroll":
@@ -139,9 +153,28 @@ def run_module():
                 module.fail_json(
                     msg=f"invalid node state {node['provision_state']}",
                     **result)
-        else:
-            module.fail_json(msg="unsupported target state",
-                             **result)
+
+        elif module.params['action'] == "inspect":
+            if node['provision_state'] == "manageable":
+                cloud.baremetal.set_node_provision_state(
+                    node=node,
+                    target="inspect",
+                    wait=module.params['wait'])
+                result['changed'] = True
+
+        elif module.params['action'] != "":
+            module.fail_json(msg="unsupported action")
+
+        # Update node to mark stage is complete
+        new_stage = module.params['move_to_stage']
+        if new_stage:
+            patch = [{
+                "op": "replace",
+                "path": "extra/bootstrap_stage",
+                "value": new_stage
+            }]
+            cloud.baremetal.patch_node(node, patch)
+            result['changed'] = True
 
     except exceptions.OpenStackCloudException as e:
         module.fail_json(msg=str(e), **result)
