@@ -67,6 +67,7 @@ bmc_password=calvin
 bmc_username=root
 rack_name={{ rack }}
 resource_class=c6420.p8276.m192
+target_bios_version=2.6.3
 
 [baremetal-compute:children]
 {{ rack }}

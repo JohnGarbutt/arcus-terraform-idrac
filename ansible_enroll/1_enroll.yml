@@ -13,6 +13,8 @@
         extra:
           rack: "{{ rack_name }}"
           rack_u: "{{ rack_u }}"
+          system_vendor:
+            bios_version: "{{ target_bios_version }}"
         resource_class: "{{ resource_class }}"
       register: enrolled_baremetal_node
       delegate_to: localhost # TODO: why does connection: local fail?

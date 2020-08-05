@@ -1,0 +1,25 @@
+---
+- hosts: baremetal-compute
+  gather_facts: false
+  tasks:
+    - name: Create ports using 1GbE mac from idrac inspection
+      debug:
+        msg: TODO
+    - name: Update node to use inband inspector
+      debug:
+        msg: TODO
+    - name: Do inband inspection on 1GbE
+      debug:
+        msg: side effect it installs mellanox stuff?
+    - name: Compare expected cable state to lldp info
+      debug:
+        msg: TODO
+    - name: Update BIOS settings for PXE on 50GbE
+      debug:
+        msg: TODO
+    - name: Do inband inspection on 50GbE to update pxe_mac
+      debug:
+        msg: TODO
+    - name: Move to avalilable
+      debug:
+        msg: Will need firmware udpate first? update target BIOS version?
