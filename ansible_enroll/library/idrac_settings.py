@@ -75,6 +75,13 @@ def wait_for_jobs(clients):
         wait_for_jobs(pending)
 
 
+def to_dict(settings):
+    settings_dict = {}
+    for name, settings_attr in settings.items():
+        settings_dict[name] = settings_attr.__dict__
+    return settings_dict
+
+
 def run_module():
     module_args = dict(
         address=dict(type='str', required=True),
@@ -111,7 +118,7 @@ def run_module():
             f"{bios_settings['SetBootOrderFqdd3']},"
             f"{bios_settings['SetBootOrderFqdd4']}"
         )
-        current_settings = client.list_bios_settings()
+        current_settings = to_dict(client.list_bios_settings())
         current = current_settings['SetBootOrderEn']
         if requested == current:
             del bios_settings['SetBootOrderFqdd1']
