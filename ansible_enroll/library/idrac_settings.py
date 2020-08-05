@@ -105,12 +105,12 @@ def run_module():
     bios_result = client.set_bios_settings(
         module.params["bios"])
     if bios_result and bios_result['is_commit_required']:
+        result['changed'] = True
         reboot_required = bios_result['is_reboot_required']
         client.commit_pending_bios_changes(reboot=reboot_required)
-    wait_for_jobs({module.params['address']: client})
+        wait_for_jobs({module.params['address']: client})
 
-    module.fail_json(msg="not implemented yet")
-
+    module.exit_json(**result)
 
 def main():
     run_module()
