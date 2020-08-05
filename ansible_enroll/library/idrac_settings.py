@@ -120,6 +120,7 @@ def run_module():
         )
         current_settings = to_dict(client.list_bios_settings())
         current = current_settings['SetBootOrderEn']
+        module.fail_json(msg=f"{current} {requested}")
         if requested == current:
             del bios_settings['SetBootOrderFqdd1']
             del bios_settings['SetBootOrderFqdd2']
