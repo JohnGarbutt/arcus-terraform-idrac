@@ -16,23 +16,23 @@ once we have an appropriate inventory.
 """
 import argparse
 import json
-import sys
 
 import jinja2
 import openstack
+from openstack import exceptions
 
 
 def get_ports(conn, rack):
     if conn is None:
         return [
             {
-                "name": "sv1",
+                "name": "sv1-u12",
                 "mac_address": "mac1",
                 "fixed_ips": [{"ip_address": "ip1"}],
                 "tags": ["DR06", "DC42"],
             },
             {
-                "name": "sv2",
+                "name": "sv2-u12",
                 "mac_address": "mac2",
                 "fixed_ips": [{"ip_address": "ip2"}],
                 "tags": ["iDRAC", "DR06", "DC42"],
@@ -92,18 +92,18 @@ def write_inventory_for_rack(conn, rack):
 
 
 if __name__ == "__main__":
-    openstack.enable_logging(True, stream=sys.stdout)
-    try:
-        conn = openstack.connection.from_config(
-            cloud="arcus", debug=False)
-    except openstack.exceptions.ConfigException:
-        print("falling back to test data")
-        conn = None
-
     parser = argparse.ArgumentParser(
         description='Generate inventory using neutron ports.')
     parser.add_argument('rack', type=str, default="DR06", nargs='?',
                         help='the rack to generate the inventory for')
+    parser.add_argument('--cloud', type=str, default="arcus",
+                        help='the OS_CLOUD to look up in clouds.yaml')
     args = parser.parse_args()
+
+    try:
+        conn = openstack.connection.from_config(cloud=args.cloud)
+    except exceptions.ConfigException:
+        print("falling back to test data")
+        conn = None
 
     write_inventory_for_rack(conn, args.rack)
