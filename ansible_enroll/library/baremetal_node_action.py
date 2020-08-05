@@ -125,7 +125,6 @@ def run_module():
         if module.params['skip_in_maintenance']:
             if node.is_maintenance:
                 module.exit_json(skipped=True, **result)
-        module.exit_json(skipped=True, **result)
 
         if module.params['target_state'] == "manageable":
             if node['provision_state'] == "manageable":
