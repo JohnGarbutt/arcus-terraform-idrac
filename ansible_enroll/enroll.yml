@@ -6,7 +6,7 @@
       baremetal_enroll:
         #state: present
         name: "{{ inventory_hostname }}"
-        type: "idrac-wsme"
+        type: "idrac-wsman"
         bmc:
           address: "{{ bmc_address }}"
           username: "admin"

@@ -51,6 +51,38 @@ uuid:
 
 from ansible.module_utils.basic import AnsibleModule
 
+
+def get_kwargs(module, bmc_type, bmc):
+    if bmc_type != "idrac-wsman":
+        module.fail_json(msg='Unsupported bmc type')
+    return dict(
+        driver="idrac",
+        driver_info={
+          "drac_address": bmc["address"],
+          # Starting with default passwords as shipped, updates later
+          "drac_password": "calvin",
+          "drac_username": "root",
+          "redfish_system_id": "/redfish/v1/Systems/System.Embedded.1",
+          "redfish_address": bmc["address"],
+          "redfish_password": "calvin",
+          "redfish_username": "root",
+          "ipmi_address": bmc["address"],
+        },
+        boot_interface="ipxe",
+        bios_interface="no-bios",
+        console_interface="no-console",
+        deploy_interface="iscsi",
+        inspect_interface="idrac-wsman",
+        management_interface="idrac-wsman",
+        network_interface="neutron",
+        power_interface="idrac-wsman",
+        raid_interface="idrac-wsman",
+        rescue_interface="agent",
+        storage_interface="noop",
+        vendor_interface="idrac-wsman",
+    )
+
+
 def run_module():
     module_args = dict(
         name=dict(type='str', required=True),
@@ -73,11 +105,21 @@ def run_module():
     if module.check_mode:
         module.exit_json(**result)
 
-    cloud = openstack.connection.from_config(
-        cloud=module.params['cloud'], debug=True)
-    node = cloud.baremetal.find_node(module.params['name'])
-    if not node:
-        module.fail_json(msg='Not implemented yet!', **result)
+    try:
+        cloud = openstack.connection.from_config(
+            cloud=module.params['cloud'], debug=True)
+        node = cloud.baremetal.find_node(module.params['name'])
+
+        if not node:
+            kwargs = get_kwargs(module, module.params['type'], module.params['bmc'])
+            node = cloud.baremetal.create_node(
+                provision_state="enroll",
+                name=module.params['name'],
+                **kwargs)
+            result['changed'] = True
+
+    except openstack.exceptions.OpenStackCloudException as e:
+        module.fail_json(msg=str(e), **result)
 
     result['uuid'] = node.id
     module.exit_json(**result)
