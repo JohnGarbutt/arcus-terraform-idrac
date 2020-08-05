@@ -12,8 +12,8 @@
           SysProfile: "PerfOptimized"
           SetBootOrderFqdd1: "NIC.Embedded.1-1-1"
           SetBootOrderFqdd2: "HardDisk.List.1-1"
-          SetBootOrderFqdd3: ""
-          SetBootOrderFqdd4: ""
+          SetBootOrderFqdd3: "NIC.Slot.4-1"
+          SetBootOrderFqdd4: "InfiniBand.Slot.4-1"
           EmbNic1: "Enabled"
       delegate_to: localhost
 

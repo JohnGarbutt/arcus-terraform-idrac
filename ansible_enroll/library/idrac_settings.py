@@ -102,8 +102,24 @@ def run_module():
     if len(jobs) > 0:
         module.fail_json(msg="pending idrac jobs")
 
-    bios_result = client.set_bios_settings(
-        module.params["bios"])
+    # check boot order, drop request if its really a no op
+    bios_settings = module.params["bios"]
+    if "SetBootOrderFqdd1" in bios_settings:
+        requested = (
+            f"{bios_settings['SetBootOrderFqdd1']},"
+            f"{bios_settings['SetBootOrderFqdd2']},"
+            f"{bios_settings['SetBootOrderFqdd3']},"
+            f"{bios_settings['SetBootOrderFqdd4']}"
+        )
+        current_settings = client.list_bios_settings()
+        current = current_settings['SetBootOrderEn']
+        if requested == current:
+            del bios_settings['SetBootOrderFqdd1']
+            del bios_settings['SetBootOrderFqdd2']
+            del bios_settings['SetBootOrderFqdd3']
+            del bios_settings['SetBootOrderFqdd4']
+
+    bios_result = client.set_bios_settings(bios_settings)
     if bios_result and bios_result['is_commit_required']:
         result['changed'] = True
         reboot_required = bios_result['is_reboot_required']
@@ -111,6 +127,7 @@ def run_module():
         wait_for_jobs({module.params['address']: client})
 
     module.exit_json(**result)
+
 
 def main():
     run_module()
