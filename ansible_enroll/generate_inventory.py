@@ -98,7 +98,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(
         description='Generate inventory using neutron ports.')
-    parser.add_argument('rack', type=str, default="DR06",
+    parser.add_argument('rack', type=str, default="DR06", nargs='?',
                         help='the rack to generate the inventory for')
     args = parser.parse_args()
 
