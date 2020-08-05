@@ -64,7 +64,7 @@ def generate_inventory(nodes, rack):
 [{{ rack }}:vars]
 bmc_type=idrac-wsman
 bmc_password=calvin
-bmc_username=admin
+bmc_username=root
 rack_name={{ rack }}
 resource_class=c6420.p8276.m192
 

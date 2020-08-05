@@ -2,6 +2,20 @@
 - hosts: baremetal-compute
   gather_facts: false
   tasks:
+    - name: Update BIOS settings for 1GbE PXE
+      idrac_settings:
+        address: "{{ bmc_address }}"
+        username: "{{ bmc_username }}"
+        password: "{{ bmc_password }}"
+        bios:
+          LogicalProc: "Disabled"
+          SysProfile: "PerfOptimized"
+          SetBootOrderFqdd1: "NIC.Embedded.1-1-1"
+          SetBootOrderFqdd2: "HardDisk.List.1-1"
+          SetBootOrderFqdd3: ""
+          SetBootOrderFqdd4: ""
+          EmbNic1: "Enabled"
+
     - name: Do inband inspection
       baremetal_node_action:
         name: "{{ inventory_hostname }}"
