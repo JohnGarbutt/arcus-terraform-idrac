@@ -114,10 +114,12 @@ def run_module():
     if "SetBootOrderFqdd1" in bios_settings:
         requested = (
             f"{bios_settings['SetBootOrderFqdd1']},"
-            f"{bios_settings['SetBootOrderFqdd2']},"
-            f"{bios_settings['SetBootOrderFqdd3']},"
-            f"{bios_settings['SetBootOrderFqdd4']}"
+            f"{bios_settings.get('SetBootOrderFqdd2')},"
+            f"{bios_settings.get('SetBootOrderFqdd3')},"
+            f"{bios_settings.get('SetBootOrderFqdd4')}"
         )
+        # Remove any trailing commas, if we have three interfaces
+        requested = requested.strip(",")
         current_settings = to_dict(client.list_bios_settings())
         current = current_settings['SetBootOrderEn']['current_value']
         if requested == current:
