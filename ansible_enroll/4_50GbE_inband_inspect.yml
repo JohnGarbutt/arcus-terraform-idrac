@@ -25,6 +25,10 @@
         move_to_stage: "4_inspect_50GbE"
       delegate_to: localhost
 
-    - name: Move to avalilable
-      debug:
-        msg: Will need firmware udpate first? update target BIOS version?
+    - name: Move nodes to available (triggers an automatic clean)
+      baremetal_node_action:
+        name: "{{ inventory_hostname }}"
+        action: "provide"
+        skip_not_in_stage: "4_inspect_50GbE"
+        move_to_stage: "available_50GbE"
+      delegate_to: localhost

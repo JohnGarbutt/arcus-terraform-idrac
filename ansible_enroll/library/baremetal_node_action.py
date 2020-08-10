@@ -161,6 +161,20 @@ def run_module():
                     msg=f"invalid node state: {node['provision_state']}",
                     **result)
 
+        elif module.params['action'] == "provide":
+            if node['provision_state'] == "available":
+                result['changed'] = False
+            elif node['provision_state'] == "manageable":
+                cloud.baremetal.set_node_provision_state(
+                    node=node,
+                    target="provide",
+                    wait=module.params['wait'])
+                result['changed'] = True
+            else:
+                module.fail_json(
+                    msg=f"invalid node state: {node['provision_state']}",
+                    **result)
+
         elif module.params['action'] != "":
             module.fail_json(msg="unsupported action")
 
