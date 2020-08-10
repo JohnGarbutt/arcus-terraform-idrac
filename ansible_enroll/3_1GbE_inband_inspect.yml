@@ -1,0 +1,22 @@
+---
+- hosts: baremetal-compute
+  gather_facts: false
+  tasks:
+    - name: Get node info so we can skip if not matching bootstrap stage
+      debug:
+        msg: TODO
+    - name: Create ports using 1GbE mac from idrac inspection
+      debug:
+        msg: TODO
+    - name: Update node to use inband inspector
+      debug:
+        msg: TODO
+    - name: Do inband inspection on 1GbE
+      debug:
+        msg: side effect it installs mellanox stuff?
+    - name: Compare expected cable state to lldp info
+      debug:
+        msg: TODO
+    - name: Double check firmware and hardware inventory
+      debug:
+        msg: TODO
