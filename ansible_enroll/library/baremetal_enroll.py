@@ -8,12 +8,12 @@ import openstack
 from openstack import exceptions
 
 ANSIBLE_METADATA = {
-    'metadata_version': '0.1',
-    'status': ['preview'],
-    'supported_by': 'community'
+    "metadata_version": "0.1",
+    "status": ["preview"],
+    "supported_by": "community",
 }
 
-DOCUMENTATION = '''
+DOCUMENTATION = """
 ---
 module: baremetal_enroll
 
@@ -34,55 +34,72 @@ options:
 
 author:
     - John Garbutt, StackHPC (@johnthetubaguy)
-'''
+"""
 
-EXAMPLES = '''
+EXAMPLES = """
 # Pass in a message
 - name: Test with a message
   baremetal_node:
     name: test123
 
-'''
+"""
 
-RETURN = '''
+RETURN = """
 uuid:
     description: uuid of created node
     type: str
     returned: always
-'''
+"""
 
 
 def get_node_properties(module):
-    bmc_type = module.params['type']
-    if bmc_type != "idrac-wsman":
-        module.fail_json(msg=f'Unsupported bmc type: {bmc_type}')
-    bmc = module.params['bmc']
-    props = dict(
-        driver="idrac",
-        driver_info={
-          "drac_address": bmc["address"],
-          # Starting with default passwords as shipped, updates later
-          "drac_password": bmc["password"],
-          "drac_username": bmc["username"],
-          "redfish_system_id": "/redfish/v1/Systems/System.Embedded.1",
-          "redfish_address": bmc["address"],
-          "redfish_password": bmc["password"],
-          "redfish_username": bmc["username"],
-          "ipmi_address": bmc["address"],
-        },
-        boot_interface="ipxe",
-        bios_interface="no-bios",
-        console_interface="no-console",
-        deploy_interface="iscsi",
-        inspect_interface="idrac-wsman",
-        management_interface="idrac-wsman",
-        network_interface="neutron",
-        power_interface="idrac-wsman",
-        raid_interface="idrac-wsman",
-        rescue_interface="agent",
-        storage_interface="noop",
-        vendor_interface="idrac-wsman",
+    bmc_type = module.params["type"]
+    if bmc_type not in ("idrac-wsman", "ipmi"):
+        module.fail_json(msg=f"Unsupported bmc type: {bmc_type}")
+    bmc = module.params["bmc"]
+    bmc_props = dict(
+        idrac=dict(
+            driver="idrac",
+            driver_info={
+                "drac_address": bmc["address"],
+                "drac_password": bmc["password"],
+                "drac_username": bmc["username"],
+            },
+            boot_interface="ipxe",
+            bios_interface="no-bios",
+            console_interface="no-console",
+            deploy_interface="iscsi",
+            inspect_interface="idrac-wsman",
+            management_interface="idrac-wsman",
+            network_interface="neutron",
+            power_interface="idrac-wsman",
+            raid_interface="idrac-wsman",
+            rescue_interface="agent",
+            storage_interface="noop",
+            vendor_interface="idrac-wsman",
+        ),
+        ipmi=dict(
+            driver="ipmi",
+            driver_info={
+                "ipmi_address": bmc["address"],
+                "ipmi_password": bmc["password"],
+                "ipmi_username": bmc["username"],
+            },
+            boot_interface="ipxe",
+            bios_interface="no-bios",
+            console_interface="no-console",
+            deploy_interface="iscsi",
+            inspect_interface="inspector",
+            management_interface="ipmitool",
+            network_interface="neutron",
+            power_interface="ipmitool",
+            raid_interface="no-raid",
+            rescue_interface="agent",
+            storage_interface="noop",
+            vendor_interface="no-vendor",
+        ),
     )
+    props = bmc_props[bmc_type]
 
     def add_optional_prop(name):
         prop = module.params[name]
@@ -97,23 +114,17 @@ def get_node_properties(module):
 
 def run_module():
     module_args = dict(
-        name=dict(type='str', required=True),
-        type=dict(type='str', required=True),
-        bmc=dict(type='dict', required=True),
-        resource_class=dict(type='str', required=False),
-        extra=dict(type='dict', required=False),
-        cloud=dict(type='str', required=False, default='arcus'),
+        name=dict(type="str", required=True),
+        type=dict(type="str", required=True),
+        bmc=dict(type="dict", required=True),
+        resource_class=dict(type="str", required=False),
+        extra=dict(type="dict", required=False),
+        cloud=dict(type="str", required=False, default="arcus"),
     )
 
-    result = dict(
-        changed=False,
-        uuid='',
-    )
+    result = dict(changed=False, uuid="",)
 
-    module = AnsibleModule(
-        argument_spec=module_args,
-        supports_check_mode=True
-    )
+    module = AnsibleModule(argument_spec=module_args, supports_check_mode=True)
 
     # Skip if check mode
     if module.check_mode:
@@ -121,17 +132,15 @@ def run_module():
 
     node = None
     try:
-        cloud = openstack.connection.from_config(
-            cloud=module.params['cloud'])
-        node = cloud.baremetal.find_node(module.params['name'])
+        cloud = openstack.connection.from_config(cloud=module.params["cloud"])
+        node = cloud.baremetal.find_node(module.params["name"])
 
         if not node:
             kwargs = get_node_properties(module)
             node = cloud.baremetal.create_node(
-                provision_state="enroll",
-                name=module.params['name'],
-                **kwargs)
-            result['changed'] = True
+                provision_state="enroll", name=module.params["name"], **kwargs
+            )
+            result["changed"] = True
 
         # TODO(johngarbutt) patch existing node?
         # TODO(johngarbutt) delete existing node?
@@ -140,7 +149,7 @@ def run_module():
         module.fail_json(msg=str(e), **result)
 
     if node:
-        result['uuid'] = node.id
+        result["uuid"] = node.id
     module.exit_json(**result)
 
 
@@ -148,5 +157,5 @@ def main():
     run_module()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

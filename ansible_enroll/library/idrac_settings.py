@@ -9,12 +9,12 @@ from ansible.module_utils.basic import AnsibleModule
 import dracclient.client
 
 ANSIBLE_METADATA = {
-    'metadata_version': '0.1',
-    'status': ['preview'],
-    'supported_by': 'community'
+    "metadata_version": "0.1",
+    "status": ["preview"],
+    "supported_by": "community",
 }
 
-DOCUMENTATION = '''
+DOCUMENTATION = """
 ---
 module: idrac_bios
 
@@ -35,22 +35,22 @@ options:
 
 author:
     - John Garbutt, StackHPC (@johnthetubaguy)
-'''
+"""
 
-EXAMPLES = '''
+EXAMPLES = """
 # Pass in a message
 - name: Test with a message
   baremetal_node:
     name: test123
 
-'''
+"""
 
-RETURN = '''
+RETURN = """
 uuid:
     description: uuid of created node
     type: str
     returned: always
-'''
+"""
 
 
 def wait_for_jobs(clients):
@@ -84,15 +84,12 @@ def to_dict(settings):
 
 def run_module():
     module_args = dict(
-        address=dict(type='str', required=True),
-        username=dict(type='str', required=True),
-        password=dict(type='str', required=True),
-        bios=dict(type='dict', required=True),
+        address=dict(type="str", required=True),
+        username=dict(type="str", required=True),
+        password=dict(type="str", required=True),
+        bios=dict(type="dict", required=True),
     )
-    module = AnsibleModule(
-        argument_spec=module_args,
-        supports_check_mode=True
-    )
+    module = AnsibleModule(argument_spec=module_args, supports_check_mode=True)
     result = dict(changed=False)
 
     # Skip if check mode
@@ -100,9 +97,10 @@ def run_module():
         module.exit_json(**result)
 
     client = dracclient.client.DRACClient(
-        host=module.params['address'],
-        username=module.params['username'],
-        password=module.params['password'])
+        host=module.params["address"],
+        username=module.params["username"],
+        password=module.params["password"],
+    )
     client.is_idrac_ready()
 
     jobs = client.list_jobs(only_unfinished=True)
@@ -121,19 +119,21 @@ def run_module():
         # Remove any trailing commas, if we have three interfaces
         requested = requested.strip(",")
         current_settings = to_dict(client.list_bios_settings())
-        current = current_settings['SetBootOrderEn']['current_value']
+        current = current_settings["SetBootOrderEn"]["current_value"]
+        result["requested_setting"] = requested
+        result["current_settings"] = current
         if requested == current:
-            del bios_settings['SetBootOrderFqdd1']
-            del bios_settings['SetBootOrderFqdd2']
-            del bios_settings['SetBootOrderFqdd3']
-            del bios_settings['SetBootOrderFqdd4']
+            del bios_settings["SetBootOrderFqdd1"]
+            del bios_settings["SetBootOrderFqdd2"]
+            del bios_settings["SetBootOrderFqdd3"]
+            del bios_settings["SetBootOrderFqdd4"]
 
     bios_result = client.set_bios_settings(bios_settings)
-    if bios_result and bios_result['is_commit_required']:
-        result['changed'] = True
-        reboot_required = bios_result['is_reboot_required']
+    if bios_result and bios_result["is_commit_required"]:
+        result["changed"] = True
+        reboot_required = bios_result["is_reboot_required"]
         client.commit_pending_bios_changes(reboot=reboot_required)
-        wait_for_jobs({module.params['address']: client})
+        wait_for_jobs({module.params["address"]: client})
 
     module.exit_json(**result)
 
@@ -142,5 +142,5 @@ def main():
     run_module()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
