@@ -17,10 +17,38 @@
           EmbNic1: "Enabled"
       delegate_to: localhost
 
+    - name: Ensure node is in manageable state
+      # Recover from inspect failed ...
+      baremetal_node_action:
+        name: "{{ inventory_hostname }}"
+        action: "manage"
+      delegate_to: localhost
+
+    - name: Set inspector interface to out of band
+      baremetal_node_update:
+        name: "{{ inventory_hostname }}"
+        changes:
+          driver: idrac
+          boot_interface: "ipxe"
+          bios_interface: "no-bios"
+          console_interface: "no-console"
+          deploy_interface: "iscsi"
+          inspect_interface: "idrac-wsman"
+          management_interface: "idrac-wsman"
+          network_interface: "neutron"
+          power_interface: "idrac-wsman"
+          raid_interface: "idrac-wsman"
+          rescue_interface: "agent"
+          storage_interface: "noop"
+          vendor_interface: "idrac-wsman"
+          driver_info/drac_password: calvin
+          driver_info/drac_username: root
+          driver_info/drac_address: "{{ idrac_ip }}"
+      delegate_to: localhost
+
     - name: Do inband inspection
       baremetal_node_action:
         name: "{{ inventory_hostname }}"
         action: "inspect"
-        skip_not_in_stage: ""
         move_to_stage: "2_idrac_inspect"
       delegate_to: localhost
