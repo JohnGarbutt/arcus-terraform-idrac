@@ -57,8 +57,8 @@ def get_node_properties(module):
     if bmc_type not in ("idrac-wsman", "ipmi"):
         module.fail_json(msg=f"Unsupported bmc type: {bmc_type}")
     bmc = module.params["bmc"]
-    bmc_props = dict(
-        idrac=dict(
+    bmc_props = {
+        "idrac-wsman": dict(
             driver="idrac",
             driver_info={
                 "drac_address": bmc["address"],
@@ -78,7 +78,7 @@ def get_node_properties(module):
             storage_interface="noop",
             vendor_interface="idrac-wsman",
         ),
-        ipmi=dict(
+        "ipmi": dict(
             driver="ipmi",
             driver_info={
                 "ipmi_address": bmc["address"],
@@ -98,7 +98,7 @@ def get_node_properties(module):
             storage_interface="noop",
             vendor_interface="no-vendor",
         ),
-    )
+    }
     props = bmc_props[bmc_type]
 
     def add_optional_prop(name):
