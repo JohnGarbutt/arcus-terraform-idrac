@@ -2,53 +2,56 @@
 - hosts: baremetal-compute
   gather_facts: false
   tasks:
-    - name: Update BIOS settings for 1GbE PXE
-      idrac_settings:
-        address: "{{ bmc_address }}"
-        username: "{{ bmc_username }}"
-        password: "{{ bmc_password }}"
-        bios:
-          LogicalProc: "Disabled"
-          SysProfile: "PerfOptimized"
-          SetBootOrderFqdd1: "NIC.Embedded.1-1-1"
-          SetBootOrderFqdd2: "HardDisk.List.1-1"
-          SetBootOrderFqdd3: "NIC.Slot.4-1"
-          SetBootOrderFqdd4: "InfiniBand.Slot.4-1"
-          EmbNic1: "Enabled"
+    - name: Get node info so we can skip if not matching bootstrap stage
+      baremetal_node_info:
+        name: "{{ inventory_hostname }}"
+      register: node_info
       delegate_to: localhost
 
-    - name: Ensure node is in manageable state
-      # Recover from inspect failed ...
-      baremetal_node_action:
-        name: "{{ inventory_hostname }}"
-        action: "manage"
-      delegate_to: localhost
+    - block:
+      - name: Update BIOS settings for 1GbE PXE
+        idrac_settings:
+          address: "{{ bmc_address }}"
+          username: "{{ bmc_username }}"
+          password: "{{ bmc_password }}"
+          bios:
+            LogicalProc: "Disabled"
+            SysProfile: "PerfOptimized"
+            SetBootOrderFqdd1: "NIC.Embedded.1-1-1"
+            SetBootOrderFqdd2: "HardDisk.List.1-1"
+            SetBootOrderFqdd3: "NIC.Slot.4-1"
+            SetBootOrderFqdd4: "InfiniBand.Slot.4-1"
+            EmbNic1: "Enabled"
+        delegate_to: localhost
+        when: False
 
-    - name: Set inspector interface to out of band
-      baremetal_node_update:
-        name: "{{ inventory_hostname }}"
-        changes:
-          driver: idrac
-          boot_interface: "ipxe"
-          bios_interface: "no-bios"
-          console_interface: "no-console"
-          deploy_interface: "iscsi"
-          inspect_interface: "idrac-wsman"
-          management_interface: "idrac-wsman"
-          network_interface: "neutron"
-          power_interface: "idrac-wsman"
-          raid_interface: "idrac-wsman"
-          rescue_interface: "agent"
-          storage_interface: "noop"
-          vendor_interface: "idrac-wsman"
-          driver_info/drac_password: calvin
-          driver_info/drac_username: root
-          driver_info/drac_address: "{{ idrac_ip }}"
-      delegate_to: localhost
+      - name: Get out of band introspection data
+        dellemc.openmanage.dellemc_get_system_inventory:
+          idrac_ip:   "{{ idrac_ip }}"
+          idrac_user: "{{ idrac_user }}"
+          idrac_password:  "{{ idrac_password }}"
+        register: introspection_data
+        delegate_to: localhost
 
-    - name: Do inband inspection
-      baremetal_node_action:
-        name: "{{ inventory_hostname }}"
-        action: "inspect"
-        move_to_stage: "2_idrac_inspect"
-      delegate_to: localhost
+      # Too large an output
+      # - debug:
+      #     msg: "{{ introspection_data['ansible_facts'][idrac_ip]['SystemInventory']}}"
+
+      - name: Set pxe mac as node property
+        vars:
+          data: "{{ introspection_data['ansible_facts'][idrac_ip]['SystemInventory'] }}"
+          mac: "{{ (data['NIC'] | selectattr('FQDD', 'equalto', stage3_nic) | list )[0]['CurrentMACAddress'] }}"
+        baremetal_node_update:
+          name: "{{ inventory_hostname }}"
+          changes:
+            extra/pxe_interface_mac: "{{ mac }}"
+        delegate_to: localhost
+
+      - name: Transition node to new state
+        baremetal_node_action:
+          name: "{{ inventory_hostname }}"
+          action: "noop"
+          move_to_stage: "2_idrac_inspect"
+        delegate_to: localhost
+
+      when: node_info.node.extra.bootstrap_stage | default("INVALID_STAGE") == "INVALID_STAGE"
