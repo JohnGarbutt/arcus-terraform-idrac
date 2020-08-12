@@ -171,6 +171,15 @@ def run_module():
                     msg=f"invalid node state: {node['provision_state']}", **result
                 )
 
+        elif module.params["action"] == "maintenance-unset":
+            if node.is_maintenance:
+                cloud.baremetal.baremetal.unset_node_maintenance(node)
+                result["changed"] = True
+
+        elif module.params["action"] == "noop":
+            # NOTE(wszumski): Consider splitting the module into action and update stage
+            pass
+
         elif module.params["action"] != "":
             module.fail_json(msg="unsupported action")
 
