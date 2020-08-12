@@ -2,28 +2,59 @@
 - hosts: baremetal-compute
   gather_facts: false
   tasks:
-    - name: Update BIOS for PXE over 50GbE and dedicated iDRAC LOM
-      idrac_settings:
-        address: "{{ bmc_address }}"
-        username: "{{ bmc_username }}"
-        password: "{{ bmc_password }}"
-        bios:
-          LogicalProc: "Disabled"
-          SysProfile: "PerfOptimized"
-          EmbNic1: "DisabledOs"
-          SetBootOrderFqdd1: "NIC.Slot.4-1"
-          SetBootOrderFqdd2: "HardDisk.List.1-1"
-          SetBootOrderFqdd3: "InfiniBand.Slot.4-1"
-          SetBootOrderFqdd4: ""
+    - name: Get node info so we can skip if not matching bootstrap stage
+      baremetal_node_info:
+        name: "{{ inventory_hostname }}"
+      register: node_info
       delegate_to: localhost
 
-    - name: Do inband inspection
-      baremetal_node_action:
-        name: "{{ inventory_hostname }}"
-        action: "inspect"
-        skip_not_in_stage: ""  # TODO??
-        move_to_stage: "4_inspect_50GbE"
-      delegate_to: localhost
+    - block:
+      - name: Update BIOS for PXE over 50GbE and dedicated iDRAC LOM
+        idrac_settings:
+          address: "{{ bmc_address }}"
+          username: "{{ bmc_username }}"
+          password: "{{ bmc_password }}"
+          bios:
+            LogicalProc: "Disabled"
+            SysProfile: "PerfOptimized"
+            EmbNic1: "DisabledOs"
+            SetBootOrderFqdd1: "NIC.Slot.4-1"
+            SetBootOrderFqdd2: "HardDisk.List.1-1"
+            SetBootOrderFqdd3: "InfiniBand.Slot.4-1"
+            SetBootOrderFqdd4: ""
+        delegate_to: localhost
+
+      - name: Ensure that we are using the ipmi driver
+        baremetal_node_update:
+          name: "{{ inventory_hostname }}"
+          changes:
+            driver: ipmi
+            boot_interface: "ipxe"
+            bios_interface: "no-bios"
+            console_interface: "no-console"
+            deploy_interface: "iscsi"
+            inspect_interface: "inspector"
+            management_interface: "ipmitool"
+            network_interface: "neutron"
+            power_interface: "ipmitool"
+            raid_interface: "no-raid"
+            rescue_interface: "agent"
+            storage_interface: "noop"
+            vendor_interface: "no-vendor"
+            driver_info/ipmi_password: "{{ bmc_password }}"
+            driver_info/ipmi_username: "{{ bmc_username }}"
+            driver_info/ipmi_address: "{{ bmc_address }}"
+        delegate_to: localhost
+
+      - name: Do inband inspection
+        baremetal_node_action:
+          name: "{{ inventory_hostname }}"
+          action: "inspect"
+          skip_not_in_stage: "3_inspect_1GbE"
+          move_to_stage: "4_inspect_50GbE"
+        delegate_to: localhost
+
+      when: node_info.node.extra.bootstrap_stage | default("INVALID_STAGE") == "3_inspect_1GbE"
 
     - name: Move nodes to available (triggers an automatic clean)
       baremetal_node_action:
