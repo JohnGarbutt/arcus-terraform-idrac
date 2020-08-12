@@ -1,2 +1,5 @@
 omsdk  # Apache2
 ansible
+openstacksdk
+python-dracclient>=4.0.0
+jinja2
