@@ -24,26 +24,10 @@
             SetBootOrderFqdd4: ""
         delegate_to: localhost
 
-      - name: Ensure that we are using the ipmi driver
+      - name: Ensure that node is using the correct driver
         baremetal_node_update:
           name: "{{ inventory_hostname }}"
-          changes:
-            driver: ipmi
-            boot_interface: "ipxe"
-            bios_interface: "no-bios"
-            console_interface: "no-console"
-            deploy_interface: "iscsi"
-            inspect_interface: "inspector"
-            management_interface: "ipmitool"
-            network_interface: "neutron"
-            power_interface: "ipmitool"
-            raid_interface: "no-raid"
-            rescue_interface: "agent"
-            storage_interface: "noop"
-            vendor_interface: "no-vendor"
-            driver_info/ipmi_password: "{{ bmc_password }}"
-            driver_info/ipmi_username: "{{ bmc_username }}"
-            driver_info/ipmi_address: "{{ bmc_address }}"
+          changes: "{{ bmc_type | baremetal_driver(bmc_address=bmc_address, bmc_password=bmc_password, bmc_username=bmc_username) }}"
         delegate_to: localhost
 
       - name: Do inband inspection
