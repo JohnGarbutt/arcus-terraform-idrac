@@ -1,0 +1,28 @@
+---
+
+- hosts: baremetal-compute
+  gather_facts: false
+  tasks:
+    - name: Collect switch port mappings
+      baremetal_switch_ports:
+        hosts: "{{ play_hosts | reject('equalto', 'localhost') | list }}"
+      delegate_to: localhost
+      run_once: true
+      register: ports
+
+    - debug:
+        msg: "{{ ports.mappings }}"
+      run_once: true
+
+    # - copy:
+    #      content: "{{ { 'expected_switchports': ports.mappings } | to_nice_yaml }}"
+    #      dest: /tmp/switch-mappings
+    #   delegate_to: localhost
+    #   run_once: true
+
+    - switch_port_compare:
+        hosts: "{{ play_hosts | reject('equalto', 'localhost') | list }}"
+        expected: "{{ expected_switchports }}"
+        actual: "{{ ports.mappings }}"
+      delegate_to: localhost
+      run_once: true
