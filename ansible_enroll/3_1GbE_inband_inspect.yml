@@ -2,23 +2,21 @@
 - hosts: baremetal-compute
   gather_facts: false
   vars:
-    # TODO: move site specific stuff to inventory?
-      pxe_network: out-of-band-management
+      pxe_network: "{{ stage3_pxe_network }}"
       dhcp_extras: [
         {
             'opt_name': 'tag:ipxe,67',
-            'opt_value': 'http://10.225.1.1:8089/inspector.ipxe',
-            #'opt_value': 'http://10.225.1.1:8089/arcus.ipxe',
+            'opt_value': '{{ stage3_ipxe_script }}',
             'ip_version': 4
         },
         {
             'opt_name': '66',
-            'opt_value': '10.225.1.1',
+            'opt_value': '{{ stage3_pxe_server }}',
             'ip_version': 4
         },
         {
             'opt_name': '150',
-            'opt_value': '10.225.1.1',
+            'opt_value': '{{ stage3_pxe_server }}',
             'ip_version': 4
         },
         {
@@ -28,7 +26,7 @@
         },
         {
             'opt_name': 'server-ip-address',
-            'opt_value': '10.225.1.1',
+            'opt_value': '{{ stage3_pxe_server }}',
             'ip_version': 4
         },
     ]

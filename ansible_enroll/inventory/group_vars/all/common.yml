@@ -2,3 +2,7 @@
 
 idrac_user: root
 idrac_password: calvin
+
+stage3_pxe_server: 10.225.1.1
+stage3_ipxe_script: "http://{{ stage3_pxe_server }}:8089/inspector.ipxe"
+stage3_pxe_network: out-of-band-management
