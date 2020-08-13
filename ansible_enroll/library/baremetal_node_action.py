@@ -173,7 +173,7 @@ def run_module():
 
         elif module.params["action"] == "maintenance-unset":
             if node.is_maintenance:
-                cloud.baremetal.baremetal.unset_node_maintenance(node)
+                cloud.baremetal.unset_node_maintenance(node)
                 result["changed"] = True
 
         elif module.params["action"] == "noop":
