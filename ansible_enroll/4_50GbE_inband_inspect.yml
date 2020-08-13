@@ -9,6 +9,16 @@
       delegate_to: localhost
 
     - block:
+
+      - name: Ensure maintenance mode is set to prevent ironic from powering down
+        # NOTE: This makes the playbook not idempotent as we unset maintenance later
+        baremetal_node_action:
+          name: "{{ inventory_hostname }}"
+          action: "maintenance-set"
+          skip_in_maintenance: False
+          skip_not_in_stage: "3_inspect_1GbE"
+        delegate_to: localhost
+
       - name: Update BIOS for PXE over 50GbE and dedicated iDRAC LOM
         idrac_settings:
           address: "{{ bmc_address }}"
@@ -29,6 +39,7 @@
           name: "{{ inventory_hostname }}"
           action: "manage"
           skip_in_maintenance: False
+          skip_not_in_stage: "3_inspect_1GbE"
         delegate_to: localhost
 
       - name: Ensure maintenance mode is unset
@@ -36,6 +47,7 @@
           name: "{{ inventory_hostname }}"
           action: "maintenance-unset"
           skip_in_maintenance: False
+          skip_not_in_stage: "3_inspect_1GbE"
         delegate_to: localhost
 
       - name: Ensure that node is using the correct driver
