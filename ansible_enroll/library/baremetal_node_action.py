@@ -176,6 +176,11 @@ def run_module():
                 cloud.baremetal.unset_node_maintenance(node)
                 result["changed"] = True
 
+        elif module.params["action"] == "maintenance-set":
+            if not node.is_maintenance:
+                cloud.baremetal.set_node_maintenance(node)
+                result["changed"] = True
+
         elif module.params["action"] != "":
             module.fail_json(msg="unsupported action")
 

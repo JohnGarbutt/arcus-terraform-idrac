@@ -9,6 +9,14 @@
       delegate_to: localhost
 
     - block:
+
+      - name: Ensure maintenance is set so that ironic doesn't power off the nodes
+        baremetal_node_action:
+          name: "{{ inventory_hostname }}"
+          action: maintenance-set
+          skip_in_maintenance: False
+        delegate_to: localhost
+
       - name: Update BIOS settings for 1GbE PXE
         idrac_settings:
           address: "{{ bmc_address }}"
@@ -50,6 +58,7 @@
         baremetal_node_action:
           name: "{{ inventory_hostname }}"
           move_to_stage: "2_idrac_inspect"
+          skip_in_maintenance: False
         delegate_to: localhost
 
       when: node_info.node.extra.bootstrap_stage | default("INVALID_STAGE") == "INVALID_STAGE"

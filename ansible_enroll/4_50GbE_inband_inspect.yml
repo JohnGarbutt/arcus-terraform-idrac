@@ -24,6 +24,20 @@
             SetBootOrderFqdd4: ""
         delegate_to: localhost
 
+      - name: Ensure node is manageable
+        baremetal_node_action:
+          name: "{{ inventory_hostname }}"
+          action: "manage"
+          skip_in_maintenance: False
+        delegate_to: localhost
+
+      - name: Ensure maintenance mode is unset
+        baremetal_node_action:
+          name: "{{ inventory_hostname }}"
+          action: "maintenance-unset"
+          skip_in_maintenance: False
+        delegate_to: localhost
+
       - name: Ensure that node is using the correct driver
         baremetal_node_update:
           name: "{{ inventory_hostname }}"
