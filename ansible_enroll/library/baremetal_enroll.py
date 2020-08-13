@@ -54,11 +54,11 @@ uuid:
 
 def get_node_properties(module):
     bmc_type = module.params["type"]
-    if bmc_type not in ("idrac-wsman", "ipmi"):
+    if bmc_type not in ("idrac", "ipmi"):
         module.fail_json(msg=f"Unsupported bmc type: {bmc_type}")
     bmc = module.params["bmc"]
     bmc_props = {
-        "idrac-wsman": dict(
+        "idrac": dict(
             driver="idrac",
             driver_info={
                 "drac_address": bmc["address"],
