@@ -137,7 +137,7 @@ def run_module():
         if module.params["action"] == "manage":
             if node["provision_state"] == "manageable":
                 result["changed"] = False
-            elif node["provision_state"] == "enroll" or node["provision_state"] == "inspect failed":
+            elif node["provision_state"] in ("enroll", "inspect failed", "available"):
                 cloud.baremetal.set_node_provision_state(
                     node=node, target="manage", wait=module.params["wait"]
                 )
