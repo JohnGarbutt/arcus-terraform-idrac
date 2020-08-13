@@ -1,0 +1,13 @@
+---
+
+# WARNING: this playbook will delete the nodes ready to restart the process again
+
+- hosts: baremetal-compute
+  gather_facts: false
+  tasks:
+    - enroll_cleanup:
+        name: "{{ inventory_hostname }}"
+        idrac_ip:   "{{ idrac_ip }}"
+        idrac_user: "{{ idrac_user }}"
+        idrac_password:  "{{ idrac_password }}"
+      delegate_to: localhost
