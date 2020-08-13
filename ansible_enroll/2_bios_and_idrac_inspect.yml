@@ -49,7 +49,6 @@
       - name: Transition node to new state
         baremetal_node_action:
           name: "{{ inventory_hostname }}"
-          action: "noop"
           move_to_stage: "2_idrac_inspect"
         delegate_to: localhost
 
