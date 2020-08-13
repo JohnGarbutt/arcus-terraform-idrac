@@ -7,8 +7,8 @@
       dhcp_extras: [
         {
             'opt_name': 'tag:ipxe,67',
-            #'opt_value': 'http://10.225.1.1:8089/inspector.ipxe',
-            'opt_value': 'http://10.225.1.1:8089/arcus.ipxe',
+            'opt_value': 'http://10.225.1.1:8089/inspector.ipxe',
+            #'opt_value': 'http://10.225.1.1:8089/arcus.ipxe',
             'ip_version': 4
         },
         {
@@ -81,6 +81,7 @@
           # NOTE: side effect it installs mellanox stuff?
           baremetal_node_action:
             name: "{{ inventory_hostname }}"
+            action: "inspect"
             skip_not_in_stage: "2_idrac_inspect"
             move_to_stage: "3_inspect_1GbE"
           delegate_to: localhost

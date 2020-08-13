@@ -23,7 +23,6 @@
             SetBootOrderFqdd4: "InfiniBand.Slot.4-1"
             EmbNic1: "Enabled"
         delegate_to: localhost
-        when: False
 
       - name: Get out of band introspection data
         dellemc.openmanage.dellemc_get_system_inventory:
