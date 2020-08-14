@@ -137,7 +137,7 @@ def run_module():
         if module.params["action"] == "manage":
             if node["provision_state"] == "manageable":
                 result["changed"] = False
-            elif node["provision_state"] == "enroll":
+            elif node["provision_state"] in ("enroll", "inspect failed", "available"):
                 cloud.baremetal.set_node_provision_state(
                     node=node, target="manage", wait=module.params["wait"]
                 )
@@ -170,6 +170,16 @@ def run_module():
                 module.fail_json(
                     msg=f"invalid node state: {node['provision_state']}", **result
                 )
+
+        elif module.params["action"] == "maintenance-unset":
+            if node.is_maintenance:
+                cloud.baremetal.unset_node_maintenance(node)
+                result["changed"] = True
+
+        elif module.params["action"] == "maintenance-set":
+            if not node.is_maintenance:
+                cloud.baremetal.set_node_maintenance(node)
+                result["changed"] = True
 
         elif module.params["action"] != "":
             module.fail_json(msg="unsupported action")

@@ -1,22 +1,93 @@
 ---
 - hosts: baremetal-compute
   gather_facts: false
+  vars:
+      pxe_network: "{{ stage3_pxe_network }}"
+      dhcp_extras: [
+        {
+            'opt_name': 'tag:ipxe,67',
+            'opt_value': '{{ stage3_ipxe_script }}',
+            'ip_version': 4
+        },
+        {
+            'opt_name': '66',
+            'opt_value': '{{ stage3_pxe_server }}',
+            'ip_version': 4
+        },
+        {
+            'opt_name': '150',
+            'opt_value': '{{ stage3_pxe_server }}',
+            'ip_version': 4
+        },
+        {
+            'opt_name': 'tag:!ipxe,67',
+            'opt_value': 'undionly.kpxe',
+            'ip_version': 4
+        },
+        {
+            'opt_name': 'server-ip-address',
+            'opt_value': '{{ stage3_pxe_server }}',
+            'ip_version': 4
+        },
+    ]
   tasks:
     - name: Get node info so we can skip if not matching bootstrap stage
-      debug:
-        msg: TODO
-    - name: Create ports using 1GbE mac from idrac inspection
-      debug:
-        msg: TODO
-    - name: Update node to use inband inspector
-      debug:
-        msg: TODO
-    - name: Do inband inspection on 1GbE
-      debug:
-        msg: side effect it installs mellanox stuff?
-    - name: Compare expected cable state to lldp info
-      debug:
-        msg: TODO
-    - name: Double check firmware and hardware inventory
-      debug:
-        msg: TODO
+      baremetal_node_info:
+        name: "{{ inventory_hostname }}"
+      register: node_info
+      delegate_to: localhost
+    - debug:
+        var: node_info
+    - block:
+        - name: Create ports using 1GbE mac from idrac inspection
+          openstack.cloud.port:
+            state: present
+            # NOTE: module doesn't support tagging
+            mac_address: "{{ node_info.node.extra.pxe_interface_mac }}"
+            name: "{{ inventory_hostname }}-pxe-{{ pxe_network }}"
+            network: "{{ pxe_network }}"
+            extra_dhcp_opts: "{{ dhcp_extras }}"
+          delegate_to: localhost
+          register: port
+          # module is buggy if port exists
+          failed_when: "'module_stderr' in port and 'mac_address' not in port.module_stderr"
+
+        - name: Ensure node is manageable
+          baremetal_node_action:
+            name: "{{ inventory_hostname }}"
+            action: "manage"
+            skip_in_maintenance: False
+            skip_not_in_stage: "2_idrac_inspect"
+          delegate_to: localhost
+
+        - name: Ensure maintenance mode is unset
+          baremetal_node_action:
+            name: "{{ inventory_hostname }}"
+            action: "maintenance-unset"
+            skip_in_maintenance: False
+            skip_not_in_stage: "2_idrac_inspect"
+          delegate_to: localhost
+
+        - name: Update node to use inband inspector
+          baremetal_node_update:
+            name: "{{ inventory_hostname }}"
+            changes:
+              inspect_interface: inspector
+          delegate_to: localhost
+
+        - name: Do inband inspection on 1GbE
+          # NOTE: side effect it installs mellanox stuff?
+          baremetal_node_action:
+            name: "{{ inventory_hostname }}"
+            action: "inspect"
+            skip_not_in_stage: "2_idrac_inspect"
+            move_to_stage: "3_inspect_1GbE"
+          delegate_to: localhost
+
+        - name: Compare expected cable state to lldp info
+          debug:
+            msg: TODO
+        - name: Double check firmware and hardware inventory
+          debug:
+            msg: TODO
+      when: node_info.node.extra.bootstrap_stage | default("INVALID_STAGE") == "2_idrac_inspect"

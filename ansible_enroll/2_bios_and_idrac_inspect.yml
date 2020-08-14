@@ -2,25 +2,63 @@
 - hosts: baremetal-compute
   gather_facts: false
   tasks:
-    - name: Update BIOS settings for 1GbE PXE
-      idrac_settings:
-        address: "{{ bmc_address }}"
-        username: "{{ bmc_username }}"
-        password: "{{ bmc_password }}"
-        bios:
-          LogicalProc: "Disabled"
-          SysProfile: "PerfOptimized"
-          SetBootOrderFqdd1: "NIC.Embedded.1-1-1"
-          SetBootOrderFqdd2: "HardDisk.List.1-1"
-          SetBootOrderFqdd3: "NIC.Slot.4-1"
-          SetBootOrderFqdd4: "InfiniBand.Slot.4-1"
-          EmbNic1: "Enabled"
+    - name: Get node info so we can skip if not matching bootstrap stage
+      baremetal_node_info:
+        name: "{{ inventory_hostname }}"
+      register: node_info
       delegate_to: localhost
 
-    - name: Do inband inspection
-      baremetal_node_action:
-        name: "{{ inventory_hostname }}"
-        action: "inspect"
-        skip_not_in_stage: ""
-        move_to_stage: "2_idrac_inspect"
-      delegate_to: localhost
+    - block:
+
+      - name: Ensure maintenance is set so that ironic doesn't power off the nodes
+        baremetal_node_action:
+          name: "{{ inventory_hostname }}"
+          action: maintenance-set
+          skip_in_maintenance: False
+        delegate_to: localhost
+
+      - name: Update BIOS settings for 1GbE PXE
+        idrac_settings:
+          address: "{{ bmc_address }}"
+          username: "{{ bmc_username }}"
+          password: "{{ bmc_password }}"
+          bios:
+            LogicalProc: "Disabled"
+            SysProfile: "PerfOptimized"
+            SetBootOrderFqdd1: "NIC.Embedded.1-1-1"
+            SetBootOrderFqdd2: "HardDisk.List.1-1"
+            SetBootOrderFqdd3: "NIC.Slot.4-1"
+            SetBootOrderFqdd4: "InfiniBand.Slot.4-1"
+            EmbNic1: "Enabled"
+        delegate_to: localhost
+
+      - name: Get out of band introspection data
+        dellemc.openmanage.dellemc_get_system_inventory:
+          idrac_ip:   "{{ idrac_ip }}"
+          idrac_user: "{{ idrac_user }}"
+          idrac_password:  "{{ idrac_password }}"
+        register: introspection_data
+        delegate_to: localhost
+
+      # Too large an output
+      # - debug:
+      #     msg: "{{ introspection_data['ansible_facts'][idrac_ip]['SystemInventory']}}"
+
+      - name: Set pxe mac as node property
+        vars:
+          data: "{{ introspection_data['ansible_facts'][idrac_ip]['SystemInventory'] }}"
+          mac: "{{ (data['NIC'] | selectattr('FQDD', 'equalto', stage3_nic) | list )[0]['CurrentMACAddress'] }}"
+        baremetal_node_update:
+          name: "{{ inventory_hostname }}"
+          changes:
+            extra/pxe_interface_mac: "{{ mac }}"
+        delegate_to: localhost
+
+      - name: Transition node to new state
+        baremetal_node_action:
+          name: "{{ inventory_hostname }}"
+          move_to_stage: "2_idrac_inspect"
+          skip_in_maintenance: False
+        delegate_to: localhost
+
+      when: node_info.node.extra.bootstrap_stage | default("INVALID_STAGE") == "INVALID_STAGE"

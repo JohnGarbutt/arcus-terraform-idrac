@@ -86,7 +86,7 @@ def run_module():
     module_args = dict(
         address=dict(type="str", required=True),
         username=dict(type="str", required=True),
-        password=dict(type="str", required=True),
+        password=dict(type="str", required=True, no_log=True),
         bios=dict(type="dict", required=True),
     )
     module = AnsibleModule(argument_spec=module_args, supports_check_mode=True)

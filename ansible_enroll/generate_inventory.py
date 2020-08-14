@@ -62,7 +62,8 @@ def generate_inventory(nodes, rack):
 {% endfor %}
 
 [{{ rack }}:vars]
-bmc_type=idrac-wsman
+bmc_type=ipmi
+stage3_nic=NIC.Embedded.1-1-1
 bmc_password=calvin
 bmc_username=root
 rack_name={{ rack }}
