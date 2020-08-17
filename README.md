@@ -1,6 +1,6 @@
 # arcus-terraform-idrac
 
-# Staring Assumptions
+# Starting Assumptions
 
 * 1Gb iDRAC untagged traffic on OOB management network
 * iDRAC configured for DHCP, with default password
