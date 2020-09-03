@@ -1,0 +1,22 @@
+---
+- hosts: baremetal-compute
+  gather_facts: false
+
+  collections:
+   - dellemc.openmanage
+
+  tasks:
+    - name: Export Server Configuration Profile
+      idrac_server_config_profile:
+        idrac_ip: "{{ idrac_ip }}"
+        idrac_user: "{{ idrac_user }}"
+        idrac_password: "{{ idrac_password }}"
+        idrac_port:      "443"
+        share_name:      "{{ playbook_dir }}/data/"
+        job_wait:        "True"
+        export_format:   "JSON"
+      register: idrac_firmware_output
+      delegate_to: localhost
+
+    - debug:
+        var: idrac_firmware_output

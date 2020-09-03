@@ -50,4 +50,37 @@ Also make sure you open the port on the firewall:
 ansible-playbook update-firmware.yml -i inventory/
 ```
 
+## Exporting and importing server configuration
 
+### Exporting current configuration
+
+Select a server to act as reference machine 
+
+```
+(venv-arcus) [will@cumulus-seed ansible_enroll]$ ansible-playbook -i inventory/ export-configuration.yml --limit svn2-dr06-u21
+```
+
+### Import
+
+Create a reference configuration. This can be the file you exported earlier unchanged or you can select
+a set of attributes to apply:
+
+```
+(venv-arcus) [will@cumulus-seed ansible_enroll]$ ./configuration-filter.py --input data/10.202.100.200_20200903_125655_scp.json --component-filter "iDRAC.Embedded.1" --attr-filter "SysLog.1.*" "IPMILan.1#AlertEnable" --component-filter "EventFilters.*" --attr-filter ".*"  | jq . > data/reference-configuration.json
+```
+
+In the example above, we are copying the configuration need to enable remote syslog output.
+
+Run the playbook to import the reference confiuration:
+
+```
+(venv-arcus) [will@cumulus-seed ansible_enroll]$ ansible-playbook -i inventory/ export-configuration.yml --limit svn2-dr06-u21
+```
+
+### Testing the configuration
+
+Prerequisites: install racadm in docker container
+
+```
+(venv-arcus) [will@cumulus-seed ~]$ sudo docker exec -it will-testin /opt/dell/srvadmin/bin/idracadm7 -r 10.202.100.162 -u root -p calvin eventfilters test -i PSU0001
+```
