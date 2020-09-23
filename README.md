@@ -1,7 +1,29 @@
 # arcus-terraform-idrac
 
-# Staring Assumptions
+Scripts to onboard baremetal compute nodes.
 
+# Design
+
+The scripts should require as few inputs to fully enroll the node as possible.
+Instead, the view of the world should be determined via introspection of the
+nodes.  This means that we are less reliant on accurate information from the
+datacentre that can lead to a costly reconfigure-recheck cycle to achieve
+alignment.
+
+We only care that servers are consistently configured e.g the same port on the
+network card is used on each server for a given network, not the more strict
+assumption that each server is connected to the correct port on the switch. The
+same requirement applies for other hardware configurations e.g PCI slots used
+for the storage. The focus should be on checking consitency and not abolsute
+alignment.
+
+Starting from the BMC MAC and server name, We should be able to determine
+everything needed to fully configure the nodes. The inventory management
+software should be updated to reflect reality, not the other way around.
+
+# Starting Assumptions
+
+* Mappings from BMC MAC to server name
 * 1Gb iDRAC untagged traffic on OOB management network
 * iDRAC configured for DHCP, with default password
 * WSME (and redfish) interface enabled, but IPMI disabled
