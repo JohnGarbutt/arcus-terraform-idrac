@@ -1,0 +1,28 @@
+---
+# WARNING: This playbook will reboot your servers
+
+- hosts: baremetal-compute
+  gather_facts: false
+
+  collections:
+   - dellemc.openmanage
+
+  tasks:
+    - name: Import Server Configuration Profile
+      idrac_server_config_profile:
+        idrac_ip: "{{ idrac_ip }}"
+        idrac_user: "{{ idrac_user }}"
+        idrac_password: "{{ idrac_password }}"
+        idrac_port: "443"
+        share_name: "{{ playbook_dir }}/data/"
+        command: import
+        scp_file: "reference-configuration.json"
+        job_wait: "True"
+        # Graceful, Forced, NoReboot
+        # shutdown_type: "NoReboot"
+        # end_host_power_state: On
+      register: idrac_import_output
+      delegate_to: localhost
+
+    - debug:
+        var: idrac_import_output
